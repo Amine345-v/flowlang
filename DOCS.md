@@ -78,23 +78,6 @@ FlowLang is a domain-specific language (DSL) for orchestrating professional work
 
 ---
 
-## Agent Model (النموذج الوكيلي)
-
-في FlowLang، كل عنصر نظامي (team، chain، process) يُدار بواسطة وكيل (Agent) مستقل يمثل جهة فاعلة مهنية (طبيب، إدارة موارد، منفذ إجراءات...).
-
-- **agent**: تعريف صريح لوكيل مسؤول عن نوع معين من المهام أو القرارات.
-- **ربط الوكلاء**: كل team أو chain أو process يمكن ربطه بوكيل عبر خاصية agent، مما يوضح من يدير هذا الجزء من النظام.
-- **أمثلة:**
-  - `agent DiagnosisAgent: يدير عمليات التشخيص.`
-  - `team DiagnosisTeam: Command<Judge> [size=2, agent=DiagnosisAgent];`
-  - `chain PatientFlowChain [agent=DiagnosisAgent] {...}`
-
-النموذج الوكيلي هو الأساس في FlowLang لتحويل اللغة الطبيعية إلى نظام برمجي مهني، حيث يتم توزيع الأدوار والمهام على وكلاء مستقلين يتفاعلون ضمن هيكل النظام (فرق، سلاسل، أشجار، منطق المسير، إلخ).
-
-انظر مثال hospital.flow لرؤية تطبيق عملي للوكلاء وربطهم بهياكل النظام.
-
----
-
 ## Example Program
 ```flow
 result JudgeResult { confidence: number; score: number; pass: boolean; };

@@ -1,13 +1,5 @@
 // FlowLang Example: Hospital Management System
 
-// Agent Model: تعريف الوكلاء الأساسيين في النظام
-agent DiagnosisAgent: يدير عمليات التشخيص، يمثل الفريق الطبي المختص بالتشخيص.
-agent ResourceAgent: يدير الموارد (أسرة، أطباء، أدوية)، يمثل فريق إدارة الموارد.
-agent ExecutionAgent: مسؤول عن تنفيذ الإجراءات (حجز، فواتير، إلخ)، يمثل فريق التنفيذ.
-// agent LLM_Agent: وكيل ذكاء اصطناعي عام لتحليل النصوص الطبية واقتراح قرارات.
-// ملاحظة: هذا الوكيل يمثل النواة الأساسية لأي وكيل ذكاء اصطناعي (مثل GPT أو Gemini أو غيرها)، ويمكن تخصيصه أو توسيعه حسب الحاجة.
-agent LLM_Agent: وكيل ذكاء اصطناعي عام لتحليل النصوص الطبية واقتراح قرارات.
-
 result JudgeResult {
   match: boolean;
   protocol: string;
@@ -29,19 +21,19 @@ result CommunicateResult {
   history: list;
 };
 
-team DiagnosisTeam: Command<Judge> [size=2, agent=DiagnosisAgent];
-team ResourceTeam: Command<Search> [size=1, agent=ResourceAgent];
-team ExecutionTeam: Command<Try> [size=2, agent=ExecutionAgent];
-team LLMTeam: Command<Communicate> [size=1, agent=LLM_Agent];
+team DiagnosisTeam: Command<Judge> [size=2];
+team ResourceTeam: Command<Search> [size=1];
+team ExecutionTeam: Command<Try> [size=2];
+team LLMTeam: Command<Communicate> [size=1];
 
-chain PatientFlowChain [agent=DiagnosisAgent] {
+chain PatientFlowChain {
   nodes: [Reception, Examination, Treatment];
   propagation: causal(decay=0.7, backprop=true, forward=true);
   labels: { critical: "true" };
   constraints: { min_beds: 1; require_protocol: true; };
 }
 
-process HospitalTree "Hospital System" [agent=ResourceAgent] {
+process HospitalTree "Hospital System" {
   root: "QualityCare";
   branch "Emergency" -> ["ER", "ICU"];
   branch "Archive" -> ["PaperRecords"];

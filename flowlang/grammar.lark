@@ -213,6 +213,3 @@ dict_kv_list: dict_kv ("," dict_kv)*
 
 dict_kv: (STRING|IDENT) ":" expr
 
-// ---------- Agents ----------
-// دعم هيكلي لتعريف وكلاء الذكاء الاصطناعي أو أي وكيل مخصص
-agent_decl: "agent" IDENT ":" STRING ";"
