@@ -1,0 +1,126 @@
+    // Parallel demo (contexts will deep-merge)
+    par {
+      tmpA = DevSearchers.search("A");
+      tmpB = DevExperimenters.try("B");
+    }
+    // Race demo (first to finish will win and merge)
+    race {
+      fast = DevMonologue.ask("fast");
+      slow = DevJudges.judge("slow", "ok");
+    }
+// FlowLang Example v0.1
+
+// Declared result types
+result JudgeResult {
+  confidence: number;
+  score: number;
+  pass: boolean;
+};
+result TryResult {
+  output: string;
+  metrics: dict;
+};
+result SearchResult {
+  hits: list;
+};
+result CommunicateResult {
+  text: string;
+};
+
+type Command<Search>;
+type Command<Try>;
+type Command<Judge>;
+type Command<Communicate>;
+
+role Developer {
+  capabilities: [code_read, code_write, run_tests, deploy];
+}
+
+policy Security {
+  rules: ["no_plain_secrets", "enforce_code_scan"];
+}
+
+team DevSearchers: Command<Search> [size=2, distribution=round_robin];
+team DevExperimenters: Command<Try> [size=1];
+team DevJudges: Command<Judge> [size=1, role=Developer, policy=Security];
+team DevMonologue: Command<Communicate> [size=1];
+
+// Example external tool resource (FFI placeholder)
+resource CodeTool: Tool {
+  name: "static-analyzer";
+}
+
+chain ModelUpdateChain {
+  nodes: [Design, Training, Evaluation, Deployment];
+  propagation: causal(decay=0.6, backprop=true, forward=true);
+  labels: { priority: "high", owner: "ml-team" };
+  constraints: {
+    max_runtime: 3600;
+    require_eval: true;
+  };
+}
+
+process ProductTree "NLP Probabilistic Model" {
+  root: "Root";
+  branch "Understanding" -> ["Collect_Requirements", "User_Stories"];
+  branch "Design" -> ["Model_Structure", "Data_Schema"];
+  branch "Build" -> ["Implement", "Train", "Validate"];
+  node "Implement" { owner: "devA" };
+  node "Validate" { checks: ["bias", "stability"] };
+  policy: { risk: 0.2 };
+  audit: enabled;
+}
+
+flow BuildProbModel(using: DevSearchers, DevExperimenters, DevJudges, DevMonologue) {
+  context retention: checkpoint;
+  distribution: round_robin;
+  merge_policy: deep_merge;
+
+  checkpoint "Understand" {
+    report = DevMonologue.ask("ما المطلوب لغويًا واحتماليًا؟");
+    S1 = DevSearchers.search("نماذج احتمالية ملائمة للغة الطبيعية");
+    J1 = DevJudges.judge(S1, "ملاءمة");
+    context.update(report, S1, J1);
+  }
+
+  checkpoint "Design" {
+    params = {"alpha": 0.1, features: ["unigram", "bigram"]};
+    T1 = DevExperimenters.try("نموذج أولي", params);
+    J2 = DevJudges.judge(T1, "استقرار");
+    conf = J2.confidence;
+    context.update(params, T1, J2, conf);
+    ModelUpdateChain.touch("Design", effect=conf);
+    // Satisfy require_eval for deployment
+    ModelUpdateChain.propagate("Evaluation", conf);
+    // Chain system ops
+    ModelUpdateChain.set_label("stage", "design-phase");
+    ModelUpdateChain.get_label("owner");
+    ModelUpdateChain.set_constraint("max_runtime", 5400);
+    ModelUpdateChain.propagate("Training", conf);
+    if (conf >= 0.7) {
+      deploy(Model="ProbNLP", env="staging");
+    } else {
+      // مجرد تفرع آخر للتجربة
+      alt = DevExperimenters.try("تحسين الإعدادات", {"alpha": 0.2});
+      J3 = DevJudges.judge(alt, "F1");
+      context.update(alt, J3, J3.confidence);
+      ModelUpdateChain.touch("Training", effect=J3.confidence);
+    }
+    // while/for example usage
+    tries = ["A", "B", "C"];
+    i = 0;
+    while (i < 2) {
+      tmp = DevExperimenters.try("loop-try", {idx: i});
+      i = i + 1;
+    }
+    for item in tries {
+      _ = DevSearchers.search(item);
+    }
+    // Tool run example
+    CodeTool.run("scan-codebase");
+    // Process tree ops
+    ProductTree.mark("Implement", "in_progress");
+    ProductTree.expand("Design", ["HyperParam_Tuning", "Schema_Review"]);
+    ProductTree.audit();
+  }
+}

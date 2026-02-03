@@ -1,0 +1,212 @@
+// ---------- Result Types ----------
+result_decl: "result" IDENT "{" result_field* "}" ";"
+result_field: IDENT ":" type_expr ";"
+type_atom: "number"|"string"|"boolean"|"list"|"dict"|IDENT
+type_expr: type_atom
+         | "option" "<" type_expr ">"
+         | "union" "<" ident_list ">"
+// FlowLang (مسير) Grammar – Lark v0.1
+// يدعم: types/roles/policies/teams/chains/process/flow/checkpoints
+// تعبيرات مع القوائم والقواميس والوصول للحقل (x.y) والاستدعاءات البسيطة
+
+%import common.CNAME -> IDENT
+%import common.WS
+%import common.ESCAPED_STRING -> STRING
+%import common.SIGNED_NUMBER -> NUMBER
+%import common.C_COMMENT
+%import common.CPP_COMMENT
+%ignore WS
+%ignore C_COMMENT
+%ignore CPP_COMMENT
+
+?start: program
+
+program: top_decl*
+
+top_decl: type_decl
+        | role_decl
+        | policy_decl
+        | team_decl
+        | chain_decl
+        | process_decl
+        | flow_decl
+        | resource_decl
+        | result_decl
+
+// ---------- Types / Roles / Policies ----------
+
+// type Command<Search>;
+type_decl: "type" "Command" "<" COMMAND_KIND ">" ";"
+COMMAND_KIND: "Search"|"Try"|"Judge"|"Communicate"
+
+role_decl: "role" IDENT "{" role_body "}"
+role_body: ("capabilities" ":" "[" ident_list? "]" ";")?
+           ("vars" ":" "{" var_decl* "}")?
+var_decl: IDENT ":" type_ref ";"
+
+type_ref: IDENT ("<" type_ref ("," type_ref)* ">")?
+
+policy_decl: "policy" IDENT "{" policy_body "}"
+policy_body: ("rules" ":" "[" (ident_or_string ("," ident_or_string)*)? "]" ";")?
+             ("vars" ":" "{" var_decl* "}")?
+ident_or_string: IDENT | STRING
+
+// ---------- Teams ----------
+
+team_decl: "team" IDENT ":" "Command" "<" COMMAND_KIND ">" "[" team_opts "]" ";"
+team_opts: team_opt ("," team_opt)*
+team_opt: "size" "=" NUMBER
+        | "role" "=" IDENT
+        | "policy" "=" IDENT
+        | "distribution" "=" ("round_robin"|"weighted"|"priority")
+
+// ---------- Chains ----------
+
+chain_decl: "chain" IDENT "{"
+              "nodes" ":" "[" ident_list? "]" ";"
+              "propagation" ":" "causal" "(" prop_args? ")" ";"
+              ("labels" ":" "{" label_kv_list? "}" ";")?
+              ("constraints" ":" "{" constraint_item* "}" ";")?
+            "}"
+prop_args: prop_arg ("," prop_arg)*
+prop_arg: "decay" "=" NUMBER
+        | "backprop" "=" boolean
+        | "forward" "=" boolean
+        | "cap" "=" NUMBER
+
+label_kv_list: (IDENT ":" STRING) ("," IDENT ":" STRING)*
+constraint_item: IDENT ":" (STRING|NUMBER|boolean) ";"
+
+ident_list: IDENT ("," IDENT)*
+
+// ---------- Process Trees ----------
+
+process_decl: "process" IDENT STRING "{" 
+                "root" ":" STRING ";"
+                process_branch*
+                (process_node | process_policy | ("audit" ":" "enabled" ";"))*
+              "}"
+process_node: "node" STRING "{" prop_assign* "}" ";"
+prop_assign: IDENT ":" (STRING|NUMBER|boolean|list_literal|dict_literal) ";"
+process_policy: "policy" ":" "{" process_policy_item* "}" ";"
+process_policy_item: IDENT ":" (STRING|NUMBER|boolean) ";"
+process_branch: "branch" STRING "->" "[" string_list? "]" ";"
+string_list: STRING ("," STRING)*
+
+// ---------- Resources ----------
+
+resource_decl: "resource" IDENT ":" ("Codebase"|"Dataset"|"MetricsStore"|"Tool") "{" resource_prop* "}"
+resource_prop: IDENT ":" (STRING|NUMBER|boolean) ";"
+
+// ---------- Flow ----------
+
+flow_decl: "flow" IDENT "(" flow_params ")" "{" flow_header* flow_stmt* "}"
+flow_params: "using" ":" ident_list
+flow_header: "context" "retention" ":" "checkpoint" ";"
+           | "distribution" ":" ("round_robin"|"weighted"|"priority") ";"
+           | "merge_policy" ":" ("last_wins"|"deep_merge"|"crdt") ";"
+
+flow_stmt: checkpoint
+         | if_stmt
+         | while_stmt
+         | for_stmt
+         | par_stmt
+         | race_stmt
+         | flow_control
+         | action_stmt ";"
+         | context_stmt ";"
+         | chain_touch_stmt ";"
+         | system_call_stmt ";"
+         | deploy_stmt ";"
+         | audit_stmt ";"
+         | var_assign ";"
+
+checkpoint: "checkpoint" STRING "{" local_stmt* "}"
+
+local_stmt: var_assign ";"
+          | action_stmt ";"
+          | if_stmt
+          | par_stmt
+          | race_stmt
+          | flow_control
+          | context_stmt ";"
+          | chain_touch_stmt ";"
+          | system_call_stmt ";"
+          | deploy_stmt ";"
+
+// ---------- Control Flow (blocks) ----------
+
+if_stmt: "if" "(" expr ")" block ("else" block)?
+
+while_stmt: "while" "(" expr ")" block
+
+for_stmt: "for" IDENT "in" IDENT block
+
+block: "{" local_stmt* "}"
+
+// ---------- Parallel / Race ----------
+par_stmt: "par" block
+race_stmt: "race" block
+
+flow_control: "flow" "." ("back_to" "(" STRING ")" | "end")
+
+context_stmt: "context" "." ("update" "(" expr_list? ")" | "snapshot" "(" ")")
+
+chain_touch_stmt: IDENT "." "touch" "(" STRING ("," "effect" "=" expr)? ")"
+
+deploy_stmt: "deploy" "(" "Model" "=" STRING "," "env" "=" STRING ")"
+
+audit_stmt: IDENT "." "audit" "(" ")"
+
+// Generic system call on chains/process trees (and future system structures)
+system_call_stmt: IDENT "." IDENT "(" arg_list? ")"
+
+// ---------- Actions ----------
+
+action_stmt: IDENT "." command_action
+command_action: "search" "(" arg_list? ")"
+              | "try"    "(" arg_list? ")"
+              | "judge"  "(" arg_list? ")"
+              | "ask"    "(" arg_list? ")"
+
+arg_list: named_arg ("," named_arg)*
+named_arg: IDENT "=" expr
+         | expr
+
+// ---------- Variables / Expressions ----------
+
+var_assign: IDENT "=" expr
+
+?expr: or_expr
+?or_expr: and_expr ("||" and_expr)*
+?and_expr: cmp_expr ("&&" cmp_expr)*
+?cmp_expr: add_expr (CMP_OP add_expr)*
+CMP_OP: "=="|"!="|"<"|">"|"<="|">="
+?add_expr: mul_expr (("+"|"-") mul_expr)*
+?mul_expr: unary_expr (("*"|"/") unary_expr)*
+?unary_expr: ("!"|"-") unary_expr -> unary
+           | primary
+
+?primary: atom (member_access)*
+member_access: "." IDENT               -> field
+             | "(" (expr_list?) ")"   -> call
+
+?atom: NUMBER        -> number
+     | STRING        -> string
+     | boolean       -> boolean
+     | IDENT         -> name
+     | list_literal
+     | dict_literal
+     | "(" expr ")"
+
+boolean: "true"|"false"
+
+expr_list: expr ("," expr)*
+
+list_literal: "[" expr_list? "]"
+
+dict_literal: "{" dict_kv_list? "}"
+
+dict_kv_list: dict_kv ("," dict_kv)*
+
+dict_kv: (STRING|IDENT) ":" expr
