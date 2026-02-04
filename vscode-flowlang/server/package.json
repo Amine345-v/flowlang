@@ -1,9 +1,10 @@
 {
-  "name": "flowlang-server",
-  "description": "FlowLang language server",
+  "name": "flow-ai-lang-server",
+  "description": "Language server for FlowAiLang",
   "version": "0.0.1",
-  "author": "FlowLang Team",
+  "author": "FlowAiLang Team",
   "license": "MIT",
+  "publisher": "flow-ai-Morocco",
   "engines": {
     "node": "^16.0.0"
   },

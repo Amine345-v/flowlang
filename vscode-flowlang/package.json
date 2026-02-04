@@ -1,9 +1,9 @@
 {
-  "name": "flowlang",
-  "displayName": "FlowLang",
-  "description": "VSCode extension for FlowLang language support",
+  "name": "flow-ai-lang",
+  "displayName": "FlowAiLang",
+  "description": "FlowAiLang language support for VS Code",
   "version": "0.0.1",
-  "publisher": "flowlang",
+  "publisher": "flow-ai-Morocco",
   "engines": {
     "vscode": "^1.80.0",
     "node": ">=16.0.0 <17.0.0 || >=18.0.0"
@@ -13,17 +13,14 @@
     "Snippets",
     "Linters"
   ],
-  "activationEvents": [
-    "onLanguage:flowlang"
-  ],
   "main": "./client/out/extension",
   "contributes": {
     "languages": [
       {
-        "id": "flowlang",
+        "id": "flow-ai-lang",
         "aliases": [
-          "FlowLang",
-          "flowlang"
+          "FlowAiLang",
+          "flow-ai-lang"
         ],
         "extensions": [
           ".flow"

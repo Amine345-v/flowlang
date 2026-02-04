@@ -1,10 +1,10 @@
 {
-  "name": "flowlang-client",
-  "description": "VSCode part of FlowLang language server",
-  "author": "FlowLang Team",
+  "name": "flow-ai-lang-client",
+  "description": "VSCode part of FlowAiLang language server",
+  "author": "FlowAiLang Team",
   "license": "MIT",
   "version": "0.0.1",
-  "publisher": "flowlang",
+  "publisher": "flow-ai-Morocco",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-org/flowlang"

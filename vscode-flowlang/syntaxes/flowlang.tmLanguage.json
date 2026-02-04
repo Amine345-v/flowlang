@@ -1,5 +1,5 @@
 {
-    "name": "FlowLang",
+    "name": "FlowAiLang",
     "scopeName": "source.flowlang",
     "fileTypes": ["flow"],
     "patterns": [
