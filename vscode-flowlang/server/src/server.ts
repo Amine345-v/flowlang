@@ -17,6 +17,7 @@ import {
     WorkspaceFolder
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { URI } from 'vscode-uri';
 
 // Configuration settings
 interface FlowLangSettings {
@@ -48,10 +49,13 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const logFile = path.join(__dirname, '..', '..', 'flowlang-ls.log');
 
 function log(message: string, data?: any) {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ${message}${data ? ' ' + JSON.stringify(data) : ''}\n`;
-    fs.appendFileSync(logFile, logMessage, 'utf8');
-    console.log(logMessage.trim());
+    try {
+        const timestamp = new Date().toISOString();
+        const logMessage = `[${timestamp}] ${message}${data ? ' ' + JSON.stringify(data) : ''}\n`;
+        fs.appendFileSync(logFile, logMessage, 'utf8');
+    } catch (e) {
+        // Cannot use console.log here as it might break the LSP stdio protocol
+    }
 }
 
 // Log unhandled promise rejections
@@ -67,21 +71,24 @@ process.on('uncaughtException', (error) => {
 
 connection.onInitialize((params: InitializeParams) => {
     log('Language server initializing with params:', params);
-    
+
     try {
         // Get the workspace folder
         const workspaceFolders = (params.workspaceFolders as WorkspaceFolder[] | null) || [];
-        const workspacePath = workspaceFolders[0]?.uri ? new URL(workspaceFolders[0].uri).pathname : '';
-        
+        let workspacePath = '';
+        if (workspaceFolders.length > 0) {
+            workspacePath = URI.parse(workspaceFolders[0].uri).fsPath;
+        }
+
         // Get settings from environment variables or use defaults
         globalSettings = {
             enableLinting: true,
             pythonPath: process.env.PYTHON_PATH || defaultSettings.pythonPath,
             flowPath: process.env.FLOW_PATH || defaultSettings.flowPath
         };
-        
+
         log('Language server settings:', globalSettings);
-        
+
         const result: InitializeResult = {
             capabilities: {
                 textDocumentSync: {
@@ -138,7 +145,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 
     const text = textDocument.getText();
     const diagnostics: Diagnostic[] = [];
-    
+
     try {
         // Run the FlowLang linter
         const { stdout, stderr } = cp.spawnSync(
@@ -165,7 +172,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
                     const line = parseInt(match[1]) - 1;
                     const column = parseInt(match[2]) - 1;
                     const message = match[3];
-                    
+
                     const diagnostic: Diagnostic = {
                         severity: DiagnosticSeverity.Error,
                         range: {
@@ -175,7 +182,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
                         message,
                         source: 'flowlang'
                     };
-                    
+
                     diagnostics.push(diagnostic);
                 }
             }
@@ -215,11 +222,6 @@ connection.onExit(() => {
 // (open, change and close text document events)
 documents.listen(connection);
 
-// Start listening
-log('Starting FlowLang Language Server...');
-connection.listen();
-log('FlowLang Language Server is now running');
-
 // This handler provides the initial list of completion items.
 connection.onCompletion(() => {
     return [
@@ -256,5 +258,7 @@ connection.onCompletionResolve((item) => {
     return item;
 });
 
-// Listen on the connection
+// Start listening
+log('Starting FlowLang Language Server...');
 connection.listen();
+log('FlowLang Language Server is now running');

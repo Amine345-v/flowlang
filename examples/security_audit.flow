@@ -1,0 +1,59 @@
+# Case Study: Cybersecurity Compliance Auditor (ISO-27001)
+
+# 1. The Maestro: Hierarchical Compliance Roadmap
+process compliance_map "ISO-27001 Roadmap" {
+    root: "Certification";
+    branch "Certification" -> ["AccessControl", "DataEncryption", "Logging"];
+    branch "AccessControl" -> ["MFA", "PasswordPolicy"];
+    
+    node "MFA" { priority: "critical"; status: "pending"; };
+    node "DataEncryption" { priority: "high"; status: "pending"; };
+}
+
+# 2. System Sequence: The Guiding Thread
+chain audit_pipeline {
+    nodes: [Scan, RiskAssessment, MitigationPlan, FinalReview];
+    propagation: causal(decay=1.0, forward=true);
+}
+
+# 3. Professional Workforce (Strict Typology)
+team scanners : Command<Search> [size=2];
+team auditors : Command<Judge>  [size=2];
+team engineers : Command<Try>    [size=1];
+
+# 4. The Conductor: High-Granularity Audit Flow
+flow compliance_audit(using: scanners, auditors, engineers) {
+    
+    # Stage 1: Discovery (Unload -> mfa_scan_report)
+    checkpoint "vuln_scan" (report: scan_results) {
+        scan_results = scanners.search("Check MFA implementation on production subdomains");
+        compliance_map.mark("MFA", "Scanning...");
+        audit_pipeline.touch("Scan", "Found 3 endpoints missing MFA");
+    }
+
+    # Stage 2: Assessment (Load scan_results -> audit_report)
+    checkpoint "risk_assessment" (report: assessment) {
+        # The Conductor prunes context, only 'scan_results' is loaded as a fresh Order
+        assessment = auditors.judge(scan_results, criteria="Impact vs Probability");
+        compliance_map.mark("MFA", "Risk Assessed");
+        audit_pipeline.touch("RiskAssessment", assessment);
+    }
+
+    # Stage 3: Mitigation Strategy
+    checkpoint "mitigation_logic" (report: engineering_plan) {
+        engineering_plan = engineers.try(assessment);
+        compliance_map.mark("MFA", "Mitigation Planned");
+        audit_pipeline.touch("MitigationPlan", "Tickets created in Jira");
+    }
+
+    # Stage 4: Final Validation
+    checkpoint "validation" (report: compliance_status) {
+        compliance_status = auditors.judge(engineering_plan);
+        if (compliance_status.pass) {
+            compliance_map.mark("MFA", "Compliant");
+        } else {
+            compliance_map.mark("MFA", "Failed-Reaudit");
+            flow.back_to("mitigation_logic");
+        }
+    }
+}
