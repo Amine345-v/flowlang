@@ -168,13 +168,13 @@ Optional model overrides (global or per verb):
 
 ```powershell
 # Global default model
-$env:FLOWLANG_AI_MODEL = "gpt-3.5-turbo"
+$env:FLOWLANG_AI_MODEL = "gpt-5.2"
 
 # Per-verb overrides
-$env:FLOWLANG_AI_MODEL_ASK = "gpt-4o"
-$env:FLOWLANG_AI_MODEL_SEARCH = "gpt-4o"
-$env:FLOWLANG_AI_MODEL_TRY = "gpt-4o-mini"
-$env:FLOWLANG_AI_MODEL_JUDGE = "gpt-4-turbo"
+$env:FLOWLANG_AI_MODEL_ASK = "gpt-5.2"
+$env:FLOWLANG_AI_MODEL_SEARCH = "gpt-5.2"
+$env:FLOWLANG_AI_MODEL_TRY = "gpt-5.2"
+$env:FLOWLANG_AI_MODEL_JUDGE = "gpt-5.2"
 ```
 
 #### Other AI Providers (PowerShell examples)
@@ -186,12 +186,12 @@ FlowLang routes all verbs through an AI executor. OpenAI is wired by default, bu
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
 # Global default model
-$env:FLOWLANG_ANTHROPIC_MODEL = "claude-3-5-sonnet-latest"
+$env:FLOWLANG_ANTHROPIC_MODEL = "claude-sonnet-5"
 # Per-verb overrides
-$env:FLOWLANG_ANTHROPIC_MODEL_ASK = "claude-3-5-sonnet-latest"
-$env:FLOWLANG_ANTHROPIC_MODEL_SEARCH = "claude-3-5-sonnet-latest"
-$env:FLOWLANG_ANTHROPIC_MODEL_TRY = "claude-3-5-haiku-latest"
-$env:FLOWLANG_ANTHROPIC_MODEL_JUDGE = "claude-3-5-sonnet-latest"
+$env:FLOWLANG_ANTHROPIC_MODEL_ASK = "claude-sonnet-5"
+$env:FLOWLANG_ANTHROPIC_MODEL_SEARCH = "claude-sonnet-5"
+$env:FLOWLANG_ANTHROPIC_MODEL_TRY = "claude-sonnet-5"
+$env:FLOWLANG_ANTHROPIC_MODEL_JUDGE = "claude-sonnet-5"
 ```
 
 - Google Gemini
@@ -199,12 +199,12 @@ $env:FLOWLANG_ANTHROPIC_MODEL_JUDGE = "claude-3-5-sonnet-latest"
 ```powershell
 $env:GEMINI_API_KEY = "g-..."
 # Global default model
-$env:FLOWLANG_GEMINI_MODEL = "gemini-1.5-pro"
+$env:FLOWLANG_GEMINI_MODEL = "gemini-3-flash"
 # Per-verb overrides
-$env:FLOWLANG_GEMINI_MODEL_ASK = "gemini-1.5-pro"
-$env:FLOWLANG_GEMINI_MODEL_SEARCH = "gemini-1.5-flash"
-$env:FLOWLANG_GEMINI_MODEL_TRY = "gemini-1.5-flash"
-$env:FLOWLANG_GEMINI_MODEL_JUDGE = "gemini-1.5-pro"
+$env:FLOWLANG_GEMINI_MODEL_ASK = "gemini-3-flash"
+$env:FLOWLANG_GEMINI_MODEL_SEARCH = "gemini-3-flash"
+$env:FLOWLANG_GEMINI_MODEL_TRY = "gemini-3-flash"
+$env:FLOWLANG_GEMINI_MODEL_JUDGE = "gemini-3-flash"
 ```
 
 - Mistral
@@ -229,7 +229,7 @@ $env:FLOWLANG_COHERE_MODEL = "command-r-plus"
 # Per-verb overrides
 $env:FLOWLANG_COHERE_MODEL_ASK = "command-r-plus"
 $env:FLOWLANG_COHERE_MODEL_SEARCH = "command-r"
-$env:FLOWLANG_COHERE_MODEL_TRY = "command-r"
+$env:FLOWLANG_COHERE_MODEL_TRY = "command-r-plus"
 $env:FLOWLANG_COHERE_MODEL_JUDGE = "command-r-plus"
 ```
 
@@ -238,14 +238,14 @@ $env:FLOWLANG_COHERE_MODEL_JUDGE = "command-r-plus"
 ```powershell
 $env:AZURE_OPENAI_API_KEY = "aoai-..."
 $env:AZURE_OPENAI_ENDPOINT = "https://your-azure-openai.openai.azure.com/"
-$env:AZURE_OPENAI_DEPLOYMENT = "gpt-4o-deployment"
+$env:AZURE_OPENAI_DEPLOYMENT = "gpt-5.2-deployment"
 # Optional global default
-$env:FLOWLANG_AZURE_OPENAI_MODEL = "gpt-4o"
+$env:FLOWLANG_AZURE_OPENAI_MODEL = "gpt-5.2"
 # Per-verb overrides (optional)
-$env:FLOWLANG_AZURE_OPENAI_MODEL_ASK = "gpt-4o"
-$env:FLOWLANG_AZURE_OPENAI_MODEL_SEARCH = "gpt-4o"
-$env:FLOWLANG_AZURE_OPENAI_MODEL_TRY = "gpt-4o-mini"
-$env:FLOWLANG_AZURE_OPENAI_MODEL_JUDGE = "gpt-4-turbo"
+$env:FLOWLANG_AZURE_OPENAI_MODEL_ASK = "gpt-5.2"
+$env:FLOWLANG_AZURE_OPENAI_MODEL_SEARCH = "gpt-5.2"
+$env:FLOWLANG_AZURE_OPENAI_MODEL_TRY = "gpt-5.2"
+$env:FLOWLANG_AZURE_OPENAI_MODEL_JUDGE = "gpt-5.2"
 ```
 
 - OpenRouter (multi-model broker)
@@ -253,12 +253,12 @@ $env:FLOWLANG_AZURE_OPENAI_MODEL_JUDGE = "gpt-4-turbo"
 ```powershell
 $env:OPENROUTER_API_KEY = "or-..."
 # Global default routed model
-$env:FLOWLANG_OPENROUTER_MODEL = "openrouter/anthropic/claude-3.5-sonnet"
+$env:FLOWLANG_OPENROUTER_MODEL = "openrouter/anthropic/claude-sonnet-5"
 # Per-verb overrides
-$env:FLOWLANG_OPENROUTER_MODEL_ASK = "openrouter/openai/gpt-4o"
-$env:FLOWLANG_OPENROUTER_MODEL_SEARCH = "openrouter/google/gemini-1.5-flash"
-$env:FLOWLANG_OPENROUTER_MODEL_TRY = "openrouter/mistral/mistral-small-latest"
-$env:FLOWLANG_OPENROUTER_MODEL_JUDGE = "openrouter/anthropic/claude-3.5-sonnet"
+$env:FLOWLANG_OPENROUTER_MODEL_ASK = "openrouter/openai/gpt-5.2"
+$env:FLOWLANG_OPENROUTER_MODEL_SEARCH = "openrouter/google/gemini-3-flash"
+$env:FLOWLANG_OPENROUTER_MODEL_TRY = "openrouter/mistral/mistral-large-latest"
+$env:FLOWLANG_OPENROUTER_MODEL_JUDGE = "openrouter/anthropic/claude-sonnet-5"
 ```
 
 - Local (Ollama)

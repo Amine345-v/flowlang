@@ -1,0 +1,21 @@
+?start: program
+program: top_decl*
+top_decl: team_decl | flow_decl
+
+team_decl: "team" IDENT ":" "Command" "<" COMMAND_KIND ">" "[" team_opts "]" ";"
+COMMAND_KIND: "Search"|"Try"|"Judge"|"Communicate"
+team_opts: team_opt ("," team_opt)*
+team_opt: "size" "=" NUMBER | "role" "=" IDENT
+
+flow_decl: "flow" IDENT "(" flow_params ")" "{" flow_stmt* "}"
+flow_params: "using" ":" ident_list
+flow_stmt: checkpoint | action_stmt ";"
+checkpoint: "checkpoint" STRING "{" "}"
+action_stmt: IDENT "." "ask" "(" STRING ")"
+ident_list: IDENT ("," IDENT)*
+
+%import common.CNAME -> IDENT
+%import common.WS
+%import common.ESCAPED_STRING -> STRING
+%import common.SIGNED_NUMBER -> NUMBER
+%ignore WS

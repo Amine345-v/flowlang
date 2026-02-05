@@ -1,0 +1,58 @@
+# Software Factory: Building an App with Maximal Granularity
+
+# 1. The Maestro: Hierarchical Project Roadmap
+process software_project "Software Lifecycle" {
+    root: "App";
+    branch "App" -> ["Backend", "Frontend"];
+    branch "Backend" -> ["API", "Database"];
+    
+    node "Market-Research" { status: "pending"; };
+    node "API-Design" { status: "pending"; };
+    node "API-Implementation" { status: "pending"; };
+}
+
+# 2. System Sequence: The Guiding Thread
+chain build_sequence {
+    nodes: [Research, Design, Implementation, QA, Release];
+    propagation: causal(decay=1.0, forward=true);
+}
+
+team researcher : Command<Search> [size=2];
+team architect  : Command<Try>    [size=1];
+team QA_Engine   : Command<Judge>  [size=3];
+
+# Maximal Granularity flow
+flow software_factory(using: researcher, architect, QA_Engine) {
+    
+    # Checkpoint 1: Initial Discovery
+    checkpoint "market_discovery" (report: m_report) {
+         m_report = researcher.search("CRM market gaps");
+         software_project.mark("Market-Research", "In-Progress");
+    }
+
+    # Checkpoint 2: Technical Discovery
+    checkpoint "tech_discovery" (report: t_report) {
+         # The conductor 'loads' m_report into the next stage
+         t_report = researcher.search(m_report);
+         software_project.mark("Market-Research", "Done");
+    }
+
+    # Checkpoint 3: Architecture Design
+    checkpoint "design_phase" (report: d_report) {
+         # High granularity prevents hallucination by distilling state here
+         d_report = architect.try(t_report);
+         software_project.mark("API-Design", "Completed");
+    }
+
+    # Checkpoint 4: Initial Implementation
+    checkpoint "impl_phase_1" (report: i1_report) {
+         i1_report = architect.try(d_report);
+         software_project.mark("API-Implementation", "Started");
+    }
+
+    # Checkpoint 5: Review
+    checkpoint "review_phase" (report: approval) {
+         approval = QA_Engine.judge(i1_report);
+         software_project.mark("API-Implementation", "Validated");
+    }
+}

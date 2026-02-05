@@ -10,7 +10,7 @@ from typing import Generator, Dict, Any
 # Add project root to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from flowlang.parser import Parser
+from flowlang.parser import parse
 from flowlang.semantic import SemanticAnalyzer
 from flowlang.runtime import Runtime
 
@@ -39,9 +39,9 @@ def sample_flow() -> str:
 
 
 @pytest.fixture
-def parser() -> Parser:
-    """Return a configured parser instance."""
-    return Parser()
+def parser_func():
+    """Return the parse function."""
+    return parse
 
 
 @pytest.fixture

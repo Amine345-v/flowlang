@@ -224,9 +224,11 @@ class SemanticAnalyzer:
             CommandKind.Communicate: "ask",
         }
         expected = mapping.get(team.kind)
-        if expected != verb:
+        # Standardize verb for comparison against expected keyword literal
+        actual = str(verb).strip().lower()
+        if expected != actual:
             raise SemanticError(
-                f"Team '{team.name}' of kind {team.kind.value} cannot perform '{verb}'. Expected '{expected}'.")
+                f"Team '{team.name}' of kind {team.kind.value} cannot perform {repr(actual)}. Expected {repr(expected)}.")
 
     def _infer_result_type_from_expr(self, expr: Tree) -> Optional[str]:
         """Detect expressions of the form TeamName.verb(...) and map to a result type name."""

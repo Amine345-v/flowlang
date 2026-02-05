@@ -75,33 +75,36 @@ def _with_retries(fn, retries: int = 2, base_delay: float = 0.5):
     raise last_exc  # type: ignore
 
 
-def _system_prompt(verb: str) -> str:
+def _system_prompt(verb: str, maestro_path: Optional[str] = None) -> str:
+    path_ctx = f"\n[Maestro Context: Binary Path {maestro_path}]" if maestro_path else ""
     if verb == "ask":
         return (
-            "You are a helpful assistant. Respond with JSON: {\\n"
-            "  \\\"text\\\": string,\\n  \\\"history\\\": array\\n}"
+            "You are a helpful assistant. Respond with JSON: {\n"
+            "  \"text\": string,\n  \"history\": array\n}" + path_ctx
         )
     if verb == "search":
         return (
-            "You are an information retrieval agent. Respond with JSON: {\\n"
-            "  \\\"hits\\\": array of strings\\n}"
+            "You are an information retrieval agent. Respond with JSON: {\n"
+            "  \"hits\": array of strings\n}" + path_ctx
         )
     if verb == "try":
         return (
-            "Execute a task and report results as JSON: {\\n"
-            "  \\\"output\\\": string,\\n  \\\"metrics\\\": {\\\"time\\\": number}\\n}"
+            "Execute a task and report results as JSON: {\n"
+            "  \"output\": string,\n  \"metrics\": {\"time\": number}\n}" + path_ctx
         )
     if verb == "judge":
         return (
-            "Evaluate and respond with JSON: {\\n"
-            "  \\\"score\\\": number,\\n  \\\"confidence\\\": number,\\n  \\\"pass\\\": boolean\\n}"
+            "Evaluate and respond with JSON: {\n"
+            "  \"score\": number,\n  \"confidence\": number,\n  \"pass\": boolean\n}" + path_ctx
         )
-    return "You are an AI that executes commands. Prefer JSON outputs."
+    return "You are an AI that executes commands. Prefer JSON outputs." + path_ctx
 
 
 def _build_user_payload(team: str, verb: str, args: List[Any], kwargs: Dict[str, Any]) -> Dict[str, Any]:
     if verb == "ask":
         prompt = args[0] if args else kwargs.get("prompt", "")
+        if hasattr(prompt, "payload"):
+            prompt = prompt.payload
         history = kwargs.get("history", [])
         return {
             "verb": verb,
@@ -112,46 +115,79 @@ def _build_user_payload(team: str, verb: str, args: List[Any], kwargs: Dict[str,
         }
     if verb == "search":
         query = args[0] if args else kwargs.get("query", "")
+        if hasattr(query, "payload"):
+            query = query.payload
         return {"verb": verb, "team": team, "query": str(query), "options": kwargs}
     if verb == "try":
         task = args[0] if args else kwargs.get("task", "")
+        if hasattr(task, "payload"):
+            task = task.payload
         return {"verb": verb, "team": team, "task": str(task), "options": kwargs}
     if verb == "judge":
         target = args[0] if args else kwargs.get("target", "")
+        if hasattr(target, "payload"):
+            target = target.payload
         criteria = args[1] if len(args) > 1 else kwargs.get("criteria", "score")
+        if hasattr(criteria, "payload"):
+            criteria = criteria.payload
         return {"verb": verb, "team": team, "target": target, "criteria": criteria, "options": kwargs}
     return {"verb": verb, "team": team, "args": args, "options": kwargs}
 
 
 def _map_to_typed_value(verb: str, content: str, parsed: Optional[Dict[str, Any]], kwargs: Dict[str, Any]) -> TypedValue:
+    """Map AI response to TypedValue with strict schema validation.
+    
+    Raises SchemaValidationError if the response doesn't match the expected schema.
+    """
+    from .schemas import validate_response, JudgeResult, SearchResult, TryResult, CommunicateResult
+    
+    # Build data dict for validation
+    if parsed is None:
+        # If we couldn't parse JSON, construct minimal data from raw content
+        if verb == "ask":
+            data = {"text": content, "history": kwargs.get("history", [])}
+        elif verb == "search":
+            data = {"hits": [content] if content else []}
+        elif verb == "try":
+            data = {"output": content, "metrics": {}}
+        elif verb == "judge":
+            # Raw content for judge is a validation failure - we need structured data
+            from .errors import SchemaValidationError
+            raise SchemaValidationError(
+                f"AI response for 'judge' must be valid JSON with score/confidence/pass fields.\n"
+                f"Received raw content: {content[:200]}..."
+            )
+        else:
+            data = {"output": content, "metrics": {}}
+    else:
+        data = parsed
+    
+    # Validate and get typed model
+    validated = validate_response(verb, data)
+    
+    # Convert to TypedValue
     if verb == "ask":
-        if isinstance(parsed, dict) and ("text" in parsed or "history" in parsed):
-            meta = {"text": parsed.get("text", content or ""), "history": parsed.get("history", kwargs.get("history", []))}
-        else:
-            meta = {"text": content, "history": kwargs.get("history", [])}
-        return TypedValue(tag=ValueTag.CommunicateResult, meta=meta)
+        return TypedValue(
+            tag=ValueTag.CommunicateResult,
+            meta={"text": validated.text, "history": validated.history}
+        )
     if verb == "search":
-        if isinstance(parsed, dict) and "hits" in parsed:
-            meta = {"hits": parsed.get("hits", [])}
-        else:
-            meta = {"hits": [content] if content else []}
-        return TypedValue(tag=ValueTag.SearchResult, meta=meta)
+        return TypedValue(
+            tag=ValueTag.SearchResult,
+            meta={"hits": validated.hits}
+        )
     if verb == "try":
-        if isinstance(parsed, dict) and ("output" in parsed or "metrics" in parsed):
-            meta = {"output": parsed.get("output", content or ""), "metrics": parsed.get("metrics", {})}
-        else:
-            meta = {"output": content, "metrics": {}}
-        return TypedValue(tag=ValueTag.TryResult, meta=meta)
+        return TypedValue(
+            tag=ValueTag.TryResult,
+            meta={"output": validated.output, "metrics": validated.metrics}
+        )
     if verb == "judge":
-        if isinstance(parsed, dict) and ("score" in parsed or "confidence" in parsed or "pass" in parsed):
-            score = parsed.get("score", 0.0)
-            conf = parsed.get("confidence", 0.0)
-            passed = parsed.get("pass", bool(score))
-        else:
-            score = 0.0
-            conf = 0.0
-            passed = False
-        return TypedValue(tag=ValueTag.JudgeResult, meta={"score": score, "confidence": conf, "pass": passed})
+        return TypedValue(
+            tag=ValueTag.JudgeResult,
+            meta={"score": validated.score, "confidence": validated.confidence, "pass": validated.pass_result}
+        )
+    
+    # Unknown verb - use TryResult as fallback
     return TypedValue(tag=ValueTag.Unknown, meta={"text": content})
 
 
@@ -171,58 +207,89 @@ class OpenAIProvider(AIProvider):
         self.client = _OpenAIClient()
 
     def execute(self, team: str, verb: str, args: List[Any], kwargs: Dict[str, Any]) -> TypedValue:
+        self.ai_default_model = os.getenv("FLOWLANG_AI_MODEL", "gpt-4o")
         model = (
             os.getenv(f"FLOWLANG_AI_MODEL_{verb.upper()}")
-            or os.getenv("FLOWLANG_AI_MODEL")
-            or "gpt-3.5-turbo"
+            or self.ai_default_model
         )
         user_payload = _build_user_payload(team, verb, args, kwargs)
         timeout_s = _get_timeout_s(kwargs, 60)
-        retries = _get_retries(kwargs, 2)
-        try:
-            def _call():
-                if kwargs.get("stream"):
-                    content_buf: List[str] = []
-                    stream = self.client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": _system_prompt(verb)},
-                            {"role": "user", "content": json.dumps(user_payload)},
-                        ],
-                        temperature=float(kwargs.get("temperature", 0.7)),
-                        max_tokens=int(kwargs.get("max_tokens", 1000)) if str(kwargs.get("max_tokens", "")).isdigit() else 1000,
-                        stream=True,
-                        timeout=timeout_s,
-                    )
-                    for ev in stream:
-                        try:
-                            delta = ev.choices[0].delta  # type: ignore[attr-defined]
-                            if hasattr(delta, "content") and delta.content:
-                                content_buf.append(delta.content)
-                        except Exception:
-                            pass
-                    return "".join(content_buf)
-                else:
-                    resp = self.client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": _system_prompt(verb)},
-                            {"role": "user", "content": json.dumps(user_payload)},
-                        ],
-                        temperature=float(kwargs.get("temperature", 0.7)),
-                        max_tokens=int(kwargs.get("max_tokens", 1000)) if str(kwargs.get("max_tokens", "")).isdigit() else 1000,
-                        timeout=timeout_s,
-                    )
-                    return resp.choices[0].message.content if resp and resp.choices else ""
+        network_retries = _get_retries(kwargs, 2)
+        schema_retries = 2
 
-            content = _with_retries(_call, retries=retries)
-        except Exception as e:
-            return TypedValue(tag=ValueTag.Unknown, meta={"error": str(e), "provider": self.name})
-        try:
-            parsed = json.loads(content) if content else {}
-        except Exception:
-            parsed = None
-        return _map_to_typed_value(verb, content, parsed, kwargs)
+        maestro_path = kwargs.get("maestro_path")
+        # Initial messages
+        messages = [
+            {"role": "system", "content": _system_prompt(verb, maestro_path)},
+            {"role": "user", "content": json.dumps(user_payload)},
+        ]
+
+        last_error = None
+        content = ""
+
+        # Schema correction loop
+        for attempt in range(schema_retries + 1):
+            try:
+                def _call():
+                    if kwargs.get("stream"):
+                        content_buf: List[str] = []
+                        stream = self.client.chat.completions.create(
+                            model=model,
+                            messages=messages,
+                            temperature=float(kwargs.get("temperature", 0.7)),
+                            max_tokens=int(kwargs.get("max_tokens", 1000)) if str(kwargs.get("max_tokens", "")).isdigit() else 1000,
+                            stream=True,
+                            timeout=timeout_s,
+                        )
+                        for ev in stream:
+                            try:
+                                delta = ev.choices[0].delta  # type: ignore[attr-defined]
+                                if hasattr(delta, "content") and delta.content:
+                                    content_buf.append(delta.content)
+                            except Exception:
+                                pass
+                        return "".join(content_buf)
+                    else:
+                        resp = self.client.chat.completions.create(
+                            model=model,
+                            messages=messages,
+                            temperature=float(kwargs.get("temperature", 0.7)),
+                            max_tokens=int(kwargs.get("max_tokens", 1000)) if str(kwargs.get("max_tokens", "")).isdigit() else 1000,
+                            timeout=timeout_s,
+                        )
+                        return resp.choices[0].message.content if resp and resp.choices else ""
+
+                content = _with_retries(_call, retries=network_retries)
+                
+                # Parse and validate
+                try:
+                    parsed = json.loads(content) if content else {}
+                except Exception:
+                    parsed = None
+                
+                return _map_to_typed_value(verb, content, parsed, kwargs)
+
+            except SchemaValidationError as e:
+                last_error = e
+                # Don't retry if it was the last attempt
+                if attempt == schema_retries:
+                    break
+                
+                # Append error to messages for correction
+                messages.append({"role": "assistant", "content": content})
+                messages.append({
+                    "role": "system", 
+                    "content": f"ERROR: Your response failed validation: {str(e)}\n"
+                               f"Please CORRECT your JSON output to match the required schema."
+                })
+            except Exception as e:
+                return TypedValue(tag=ValueTag.Unknown, meta={"error": str(e), "provider": self.name})
+
+        # Final failure after retries
+        return TypedValue(
+            tag=ValueTag.Unknown, 
+            meta={"error": f"Schema validation failed after {schema_retries} retries. Last error: {last_error}", "content": content}
+        )
 
 
 class AnthropicProvider(AIProvider):
@@ -237,7 +304,7 @@ class AnthropicProvider(AIProvider):
         model = (
             os.getenv(f"FLOWLANG_ANTHROPIC_MODEL_{verb.upper()}")
             or os.getenv("FLOWLANG_ANTHROPIC_MODEL")
-            or "claude-3-5-sonnet-latest"
+            or "claude-sonnet-5"
         )
         user_payload = _build_user_payload(team, verb, args, kwargs)
         timeout_s = _get_timeout_s(kwargs, 60)
@@ -296,7 +363,7 @@ class GeminiProvider(AIProvider):
         model_name = (
             os.getenv(f"FLOWLANG_GEMINI_MODEL_{verb.upper()}")
             or os.getenv("FLOWLANG_GEMINI_MODEL")
-            or "gemini-1.5-pro"
+            or "gemini-3-flash"
         )
         user_payload = _build_user_payload(team, verb, args, kwargs)
         timeout_s = _get_timeout_s(kwargs, 60)
@@ -388,7 +455,7 @@ class CohereProvider(AIProvider):
         model = (
             os.getenv(f"FLOWLANG_COHERE_MODEL_{verb.upper()}")
             or os.getenv("FLOWLANG_COHERE_MODEL")
-            or "command-r"
+            or "command-r-plus"
         )
         user_payload = _build_user_payload(team, verb, args, kwargs)
         timeout_s = _get_timeout_s(kwargs, 60)
@@ -428,7 +495,7 @@ class AzureOpenAIProvider(AIProvider):
         self.api_key = os.getenv("AZURE_OPENAI_API_KEY")
         self.endpoint = os.getenv("AZURE_OPENAI_ENDPOINT").rstrip("/")
         self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
 
     def execute(self, team: str, verb: str, args: List[Any], kwargs: Dict[str, Any]) -> TypedValue:
         user_payload = _build_user_payload(team, verb, args, kwargs)
@@ -516,7 +583,7 @@ class OllamaProvider(AIProvider):
         model = (
             os.getenv(f"FLOWLANG_OLLAMA_MODEL_{verb.upper()}")
             or os.getenv("FLOWLANG_OLLAMA_MODEL")
-            or "llama3.1:8b"
+            or "llama3.3"
         )
         user_payload = _build_user_payload(team, verb, args, kwargs)
         url = f"{self.base}/api/chat"

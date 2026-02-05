@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 import os
 import json
 from lark import Tree, Token
@@ -22,8 +22,9 @@ except Exception:  # pragma: no cover - optional dependency
 from .parser import parse
 from .semantic import SemanticAnalyzer
 from .errors import RuntimeFlowError
-from .types import TypedValue, ValueTag
+from .types import TypedValue, ValueTag, Order, CommandKind
 from .ai_providers import select_provider
+from .persistence import PersistenceManager, FlowState
 
 # Optional OpenAI client import for AI-backed execution
 try:  # pragma: no cover - optional dependency
@@ -36,6 +37,7 @@ class EvalContext:
     variables: Dict[str, Any]
     checkpoints: List[str]
     checkpoint_index: int = 0
+    current_stage: Optional[str] = None
     back_to_target: Optional[str] = None
     reports: List[Any] = None
     merge_policy: str = "last_wins"
@@ -45,7 +47,8 @@ class EvalContext:
             self.reports = []
 
 class Runtime:
-    def __init__(self):
+    def __init__(self, dry_run: bool = False):
+        self.dry_run = dry_run
         self.tree: Optional[Tree] = None
         self.console: List[str] = []
         # runtime structures
@@ -59,7 +62,7 @@ class Runtime:
         # AI execution wiring: enabled when OpenAI client available and API key set
         self.ai_client = _OpenAIClient() if (_OpenAIClient and os.getenv("OPENAI_API_KEY")) else None
         # Default model and per-verb mapping; can be overridden by env vars
-        self.ai_default_model = os.getenv("FLOWLANG_AI_MODEL", "gpt-3.5-turbo")
+        self.ai_default_model = os.getenv("FLOWLANG_AI_MODEL", "gpt-4o")
         # Allow a simple per-verb override via env, e.g. FLOWLANG_AI_MODEL_SEARCH
         self.ai_model_per_verb: Dict[str, str] = {
             "ask": os.getenv("FLOWLANG_AI_MODEL_ASK", self.ai_default_model),
@@ -69,6 +72,7 @@ class Runtime:
         }
         # Multi-provider selector (OpenAI → Anthropic → Gemini → Mistral → Cohere → Azure → OpenRouter → Ollama)
         self.ai_provider = select_provider()
+        self.persistence = PersistenceManager()
 
     def log(self, msg: str):
         self.console.append(msg)
@@ -97,7 +101,7 @@ class Runtime:
         raise RuntimeFlowError(f"Flow '{flow_name}' not found")
 
     # ---------- Flow execution ----------
-    def _execute_flow(self, flow: Tree):
+    def _execute_flow(self, flow: Tree, resume_state: Optional[FlowState] = None):
         name = str(flow.children[0])
         # teams list
         teams: List[str] = []
@@ -117,19 +121,34 @@ class Runtime:
                 if isinstance(ch, Token):
                     sval = str(ch)
                     if seen_key:
-                        if sval in ("last_wins", "deep_merge", "crdt"):
+                        if sval in ("last_wins", "deep_merge", "crdt", "bounded_deep"):
                             merge_policy = sval
                             seen_key = False
                             break
                         seen_key = False
                     if sval == "merge_policy":
                         seen_key = True
-        ctx = EvalContext(variables={}, checkpoints=checkpoints_names, merge_policy=merge_policy)
+        ctx_vars = {}
+        if resume_state:
+            ctx_vars = resume_state.eval_context
+            
+        ctx = EvalContext(variables=ctx_vars, checkpoints=checkpoints_names, merge_policy=merge_policy)
         self.log(f"[flow] Start '{name}' with checkpoints: {checkpoints_names}")
         pc = 0
+        
+        if resume_state:
+             # Fast forward
+             last_cp = resume_state.checkpoints[-1] if resume_state.checkpoints else None
+             if last_cp:
+                 if last_cp in checkpoints_names:
+                     pc = checkpoints_names.index(last_cp) + 1
+                     self.log(f"[flow] Resuming: Fast-forwarding past {last_cp} (pc={pc})")
+                 else:
+                     self.log(f"[flow] Warning: synced checkpoint {last_cp} not found in current flow version")
         while pc < len(checkpoints_nodes):
             cp_node = checkpoints_nodes[pc]
             cp_name = cp_node.children[0].value
+            ctx.current_stage = cp_name
             self.log(f"[checkpoint] -> {cp_name}")
             self.metrics["checkpoints"] += 1
             t0 = time.perf_counter()
@@ -142,6 +161,51 @@ class Runtime:
             dt_ms = (time.perf_counter() - t0) * 1000.0
             self.metrics["checkpoint_ms"][cp_name] = dt_ms
             self.log(f"[checkpoint.done] {cp_name} in {dt_ms:.2f} ms")
+            
+            # 6. Concept Alignment: Checkpoint Reports
+            # If the checkpoint defined a report, we prune everything else (Handover)
+            report_vars = set()
+            # Look for expr_list child directly in cp_node
+            for child in cp_node.children:
+                if isinstance(child, Tree) and child.data == "expr_list":
+                     for e in child.children:
+                         # Evaluate to get the variable name/key to keep
+                         val = self._eval_expr(e, ctx)
+                         report_vars.add(str(val))
+                     break
+            
+            if report_vars:
+                 kept = {}
+                 for k, v in ctx.variables.items():
+                     if k.startswith("__") or k in report_vars:
+                         # 6. Concept Alignment: Unload Orders into Reports
+                         # If it's an Order or a list of Orders, mark them complete as they are now 'reports'
+                         def _mark_complete(val):
+                             if isinstance(val, Order):
+                                 val.complete()
+                             elif isinstance(val, list):
+                                 for x in val: _mark_complete(x)
+                             elif isinstance(val, TypedValue) and val.tag == ValueTag.List:
+                                 for x in val.value: _mark_complete(x)
+                         
+                         _mark_complete(v)
+                         kept[k] = v
+                 
+                 removed = len(ctx.variables) - len(kept)
+                 ctx.variables = kept
+                 self.log(f"[checkpoint] Report handover: kept {list(report_vars)}, pruned {removed} keys")
+
+            # Auto-save state (Save the pruned/handover state)
+            try:
+                saved_path = self.persistence.save_state(
+                    name=name,
+                    ctx_vars=ctx.variables,
+                    checkpoints=checkpoints_names[:pc+1]
+                )
+                self.log(f"[persistence] Saved state to {saved_path}")
+            except Exception as e:
+                self.log(f"[persistence] Failed to save state: {e}")
+
             if ctx.back_to_target is not None:
                 target = ctx.back_to_target
                 if target not in ctx.checkpoints:
@@ -154,6 +218,24 @@ class Runtime:
             pc += 1
         self.log(f"[flow] End '{name}'")
         self.log(f"[metrics] {self.metrics}")
+
+    def resume(self, state_path: str):
+        """Resume execution from a saved state file."""
+        state = self.persistence.load_state(state_path)
+        self.log(f"[resume] Loaded state '{state.flow_name}' from {state.timestamp}")
+        
+        if not self.tree:
+             raise RuntimeFlowError("Cannot resume: no program loaded. Load source first.")
+
+        target_flow = None
+        for flow in self.tree.find_data("flow_decl"):
+            if str(flow.children[0]) == state.flow_name:
+                target_flow = flow
+                break
+        if not target_flow:
+            raise RuntimeFlowError(f"Flow '{state.flow_name}' not found in loaded program")
+        
+        self._execute_flow(target_flow, resume_state=state)
 
     # ---------- Statement execution ----------
     def _exec_block(self, stmts_iter, ctx: EvalContext):
@@ -191,6 +273,8 @@ class Runtime:
                         self._exec_audit(child, ctx)
                     case "system_call_stmt":
                         self._exec_system_call(child, ctx)
+                    case "confirm_stmt":
+                        self._exec_confirm_stmt(child, ctx)
                     case _:
                         raise RuntimeFlowError(f"Unsupported statement: {child.data}")
             else:
@@ -281,6 +365,8 @@ class Runtime:
             base.variables = self._deep_merge(base.variables, other.variables)
         elif policy == "crdt":
             base.variables = self._crdt_merge(base.variables, other.variables)
+        elif policy == "bounded_deep":
+            base.variables = self._bounded_deep_merge(base.variables, other.variables)
         else:
             base.variables.update(other.variables)
         # reports always extend
@@ -298,6 +384,33 @@ class Runtime:
             return out
         if isinstance(a, list) and isinstance(b, list):
             return a + [x for x in b]
+        return b
+
+    def _bounded_deep_merge(self, a: Any, b: Any, depth: int = 0) -> Any:
+        MAX_DEPTH = 50
+        MAX_LIST_LEN = 100
+        
+        if depth > MAX_DEPTH:
+            return b  # Depth limit reached, replacement wins
+            
+        if isinstance(a, dict) and isinstance(b, dict):
+            out = dict(a)
+            for k, v in b.items():
+                if k in out:
+                    out[k] = self._bounded_deep_merge(out[k], v, depth + 1)
+                else:
+                    out[k] = v
+            return out
+            
+        if isinstance(a, list) and isinstance(b, list):
+            # Enforce max list length
+            new_items = [x for x in b]
+            merged = a + new_items
+            if len(merged) > MAX_LIST_LEN:
+                # Keep last N
+                return merged[-MAX_LIST_LEN:]
+            return merged
+            
         return b
 
     def _crdt_merge(self, a: Any, b: Any) -> Any:
@@ -334,6 +447,16 @@ class Runtime:
 
     def _exec_context_stmt(self, node: Tree, ctx: EvalContext):
         op = str(node.children[0]) if isinstance(node.children[0], Token) else node.children[0]
+        
+        # Max context size limit (number of keys in variables)
+        MAX_CONTEXT_SIZE = int(os.getenv("FLOWLANG_MAX_CONTEXT_SIZE", "1000"))
+        # Check size before any operation
+        if len(ctx.variables) > MAX_CONTEXT_SIZE:
+             # Allow prune/snapshot even if full, but block update
+             if op not in ("prune", "snapshot"):
+                 from .errors import ContextOverflowError
+                 raise ContextOverflowError(f"Context size {len(ctx.variables)} exceeds limit {MAX_CONTEXT_SIZE}")
+
         if op == "update":
             # update(args...)
             args_tree = node.children[1] if len(node.children) > 1 else None
@@ -343,10 +466,42 @@ class Runtime:
                     items.append(self._eval_expr(e, ctx))
             ctx.reports.append(items)
             self.log(f"[context.update] +{len(items)} items")
+            
         elif op == "snapshot":
+            # snapshot("name"?)
+            name = "snapshot"
+            if len(node.children) > 1:
+                args_tree = node.children[1]
+                if isinstance(args_tree, Tree) and args_tree.data == "expr_list":
+                    name = str(self._eval_expr(args_tree.children[0], ctx))
+            
             snap = {k: v for k, v in ctx.variables.items()}
-            ctx.variables["__snapshot__"] = snap
-            self.log("[context.snapshot]")
+            # Store snapshot validation-safe (e.g. in a special key or externally)
+            # For now, we store in variables with a prefix, but we must exclude it from counting or future snapshots?
+            # Better: store just a log message or return it. The original code stored in __snapshot__
+            ctx.variables[f"__snapshot_{name}__"] = snap
+            self.log(f"[context.snapshot] saved as '__snapshot_{name}__'")
+            
+        elif op == "prune":
+            # prune(keep=[keys...])
+            keep_keys = set()
+            if len(node.children) > 1:
+                args_tree = node.children[1]
+                if isinstance(args_tree, Tree) and args_tree.data == "expr_list":
+                    # Evaluating arguments which should be strings
+                    for e in args_tree.children:
+                        val = self._eval_expr(e, ctx)
+                        if isinstance(val, list):
+                            keep_keys.update(str(k) for k in val)
+                        else:
+                            keep_keys.add(str(val))
+            
+            # Always keep system keys
+            preserved = {k: v for k, v in ctx.variables.items() if k.startswith("__") or k in keep_keys}
+            removed_count = len(ctx.variables) - len(preserved)
+            ctx.variables = preserved
+            self.log(f"[context.prune] removed {removed_count} keys, kept {list(keep_keys)}")
+            
         else:
             raise RuntimeFlowError(f"Unknown context op {op}")
 
@@ -411,6 +566,11 @@ class Runtime:
     def _exec_deploy(self, node: Tree, ctx: EvalContext):
         model = node.children[0].value
         env = node.children[1].value
+        
+        if self.dry_run:
+            self.log(f"[dry_run] Skip deploy model={model} env={env}")
+            return
+            
         # Governance checks
         # 1) capability 'deploy' present on any team's role
         has_deploy_cap = False
@@ -440,6 +600,11 @@ class Runtime:
         # IDENT "." IDENT "(" arg_list? ")"
         target = str(node.children[0])
         op = str(node.children[1])
+        
+        if self.dry_run:
+             self.log(f"[dry_run] Skip system call {target}.{op}")
+             return
+
         args: List[Any] = []
         kwargs: Dict[str, Any] = {}
         if len(node.children) > 2 and isinstance(node.children[2], Tree) and node.children[2].data == "arg_list":
@@ -465,6 +630,55 @@ class Runtime:
             self._tool_call(target, op, args, kwargs, ctx)
             return
         self.log(f"[system] {target}.{op} args={args} kwargs={kwargs}")
+
+    def _exec_confirm_stmt(self, node: Tree, ctx: EvalContext):
+        # confirm ( STRING [, kwargs] ) -> IDENT
+        prompt_node = node.children[0]
+        prompt = prompt_node.value.strip('"') if isinstance(prompt_node, Token) else str(prompt_node)
+        
+        # kwargs parsing (timeout, etc)
+        kwargs = {}
+        target_var = None
+        
+        # Iterating children to find named args and target variable
+        # Grammar: "confirm" "(" STRING ("," named_arg)* ")" "->" IDENT
+        # children: [STRING, named_arg*, IDENT]
+        for ch in node.children[1:]:
+             if isinstance(ch, Tree) and ch.data == "named_arg":
+                 k = str(ch.children[0])
+                 v = self._eval_expr(ch.children[1], ctx)
+                 kwargs[k] = v
+             elif isinstance(ch, Token):
+                 target_var = str(ch)
+                 
+        if not target_var:
+             # Should be last child?
+             last = node.children[-1]
+             if isinstance(last, Token):
+                 target_var = str(last)
+             else:
+                 raise RuntimeFlowError("confirm statement missing target variable")
+
+        timeout = kwargs.get("timeout", float('inf'))
+        self.log(f"[gate] Requesting confirmation: '{prompt}' (timeout={timeout}s)")
+        
+        # In a real production system, this would suspend execution or call a callback.
+        # For now, we simulate with CLI input or env var auto-approve.
+        if os.getenv("FLOWLANG_AUTO_APPROVE"):
+            self.log("[gate] Auto-approved by env")
+            approved = True
+        else:
+            try:
+                # Use input() with simple printed prompt
+                 print(f"!!! CONFIRM REQUEST: {prompt} [y/N] ", end="", flush=True)
+                 # blocking wait
+                 resp = input().strip().lower()
+                 approved = resp in ("y", "yes")
+            except EOFError:
+                 approved = False
+        
+        ctx.variables[target_var] = approved
+        self.log(f"[gate] Result: {approved}")
 
     # ---------- Build runtime structures from AST ----------
     def _build_structs(self):
@@ -583,6 +797,28 @@ class Runtime:
             if not pname:
                 continue
             nodes: Dict[str, Dict[str, Any]] = {}
+            root = None
+            branches: Dict[str, List[str]] = {}
+            for child in pr.children:
+                if isinstance(child, Token) and child.type == "STRING" and root is None:
+                     # This matches the 'root : STRING' part of the grammar
+                     # Wait, children[1] is the description STRING. 
+                     # children[2]... might be root. 
+                     pass
+            
+            # Use find_data to be more robust
+            root_match = list(pr.find_data("root")) # There is no 'root' rule in grammar, it's literal
+            # Grammar is: "process" IDENT STRING "{" "root" ":" STRING ";" ...
+            # Let's find the STRING tokens.
+            strings = [str(c.value) for c in pr.children if isinstance(c, Token) and c.type == "STRING"]
+            if len(strings) >= 2:
+                root = strings[1]
+            
+            for br in pr.find_data("process_branch"):
+                parent = str(br.children[0].value)
+                children = [str(c.value) for c in br.find_data("string_list") for c in c.children]
+                branches[parent] = children
+
             for pn in pr.find_data("process_node"):
                 nname = pn.children[0].value
                 props: Dict[str, Any] = {}
@@ -598,6 +834,8 @@ class Runtime:
                 policies[k] = v
             self.processes[pname] = {
                 "nodes": nodes,
+                "root": root,
+                "branches": branches,
                 "policies": policies,
                 "marks": {},
             }
@@ -725,7 +963,7 @@ class Runtime:
             policies = pr.get("policies", {})
             prot = policies.get("protected_nodes")
             if isinstance(prot, str) and prot:
-                if str(node) in {s.strip() for s in prot.split(",")}:
+                if str(node) in {s.strip() for s in prot.split(", ")}:
                     raise RuntimeFlowError(f"Process '{name}': node '{node}' is protected (policy)")
             if policies.get("audit_required"):
                 if pr["marks"].get(str(node)) != "audited":
@@ -733,7 +971,37 @@ class Runtime:
             pr["nodes"].pop(str(node), None)
             self.log(f"[process] {name}.collapse {node}")
             return
+        if op == "find":
+            # Phase 9: Maestro Search
+            target = args[0] if args else kwargs.get("target")
+            path = self._get_binary_path(name, str(target))
+            self.log(f"[process] {name}.find {target} @ path={path}")
+            return path
         self.log(f"[process] {name}.{op} args={args} kwargs={kwargs}")
+
+    def _get_binary_path(self, pname: str, nname: str) -> str:
+        """Computes bit-string path (e.g. 0101) from root to node."""
+        pr = self.processes.get(pname)
+        if not pr: return ""
+        root = pr.get("root")
+        if not root: return ""
+        if nname == root: return ""
+        
+        # BFS to find path
+        queue = [(root, "")]
+        visited = {root}
+        while queue:
+            curr, path = queue.pop(0)
+            children = pr["branches"].get(curr, [])
+            for i, child in enumerate(children):
+                if child not in visited:
+                    # Use binary convention: 0 for first child, 1 for second
+                    new_path = path + str(i if len(children) <= 2 else bin(i)[2:])
+                    if child == nname:
+                        return new_path
+                    visited.add(child)
+                    queue.append((child, new_path))
+        return ""
 
     def _tool_call(self, name: str, op: str, args: List[Any], kwargs: Dict[str, Any], ctx: EvalContext):
         tool = self.tools[name]
@@ -752,51 +1020,171 @@ class Runtime:
         # IDENT '.' command_action
         team = str(node.children[0])
         action = node.children[1]
-        verb_tok = action.children[0]
-        verb = str(verb_tok)
-        # parse args
+        verb = str(action.children[0])
+        
+        # parse args (needed for logging even in dry run)
         args: List[Any] = []
         kwargs: Dict[str, Any] = {}
         if len(action.children) > 1 and isinstance(action.children[1], Tree) and action.children[1].data == "arg_list":
-            for item in action.children[1].children:
-                if isinstance(item, Tree) and item.data == "named_arg":
-                    if len(item.children) == 2 and isinstance(item.children[0], Token):
-                        # named
-                        k = str(item.children[0])
-                        v = self._eval_expr(item.children[1], ctx)
-                        kwargs[k] = v
-                    else:
-                        # positional
-                        v = self._eval_expr(item.children[0], ctx)
-                        args.append(v)
-        if verb == "ask":
-            # تحديث سجل الحوار الذاتي في السياق
-            prev = ctx.variables.get("__monologue_history__", [])
-            prompt = args[0] if args else kwargs.get("prompt", "")
-            prev.append(str(prompt))
-            kwargs["history"] = prev
-        member_idx = self._select_team_member(team)
-        if self.tracer:
-            with self.tracer.start_as_current_span(f"action:{team}.{verb}"):
-                # Prefer unified provider first, then fall back to OpenAI client path, then fake
-                if self.ai_provider:
-                    result = self.ai_provider.execute(team, verb, args, kwargs)
-                elif self.ai_client:
-                    result = self._ai_command(team, verb, args, kwargs, member_idx)
-                else:
-                    result = self._fake_command(team, verb, args, kwargs, member_idx)
+             for item in action.children[1].children:
+                 if isinstance(item, Tree) and item.data == "named_arg":
+                     k = str(item.children[0])
+                     v = self._eval_expr(item.children[1], ctx)
+                     kwargs[k] = v
+                 else:
+                     v = self._eval_expr(item.children[0], ctx)
+                     args.append(v)
+
+        # 6. Concept Alignment: Strict Team Typing
+        # Map verb to kind
+        verb_kind_map = {
+            "ask": "Communicate",
+            "search": "Search",
+            "try": "Try",
+            "judge": "Judge"
+        }
+        
+        # Check team definition
+        team_info = self.teams.get(team)
+        # Only check strictness if team is registered (to support dynamic/legacy teams)
+        if team_info:
+             kind = team_info.get("kind")
+             req_kind = verb_kind_map.get(verb)
+             if kind and req_kind and kind != req_kind:
+                 raise RuntimeFlowError(f"Team '{team}' is specialized for {kind}, cannot perform '{verb}' ({req_kind})")
+
+        req_kind = verb_kind_map.get(verb)
+
+        # 6. Concept Alignment: Variables as Orders (Batch Processing)
+        # If the first argument is a List of Orders (or just a list), we iterate (The Zone)
+        # Unless it's a specific verb that takes a list as a single arg (like 'judge' comparing list?)
+        # For now, we assume implicit mapping if arg0 is list and strict typing is on.
+        
+        is_batch = False
+        batch_items = []
+        if args and isinstance(args[0], list):
+             is_batch = True
+             batch_items = args[0]
+        elif args and isinstance(args[0], Order):
+             # Handle single order as if it's the only item in a batch for logic reuse
+             is_batch = True
+             batch_items = [args[0]]
+             args = args[1:] # Adjust args for the loop
+
+        if is_batch:
+            self.log(f"[{team}.{verb}] Entering Zone: Processing batch of {len(batch_items)} items")
+            results = []
+            for item in batch_items:
+                 i_args = [item] + args[1:]
+                 # If item is not an Order, try promotion
+                 if not isinstance(item, Order):
+                     item = Order(id=f"auto_{len(results)}", payload=item, kind=req_kind or CommandKind.Try)
+                 
+                 # 8. Data Chains: Exclusive Activity Check
+                 skip_reason = None
+                 if item.chain_node:
+                      for cname, cinfo in self.chains.items():
+                          if item.chain_node in cinfo["nodes"]:
+                              eff = cinfo["effects"].get(item.chain_node)
+                              if eff in ("satisfied", "skip", "fixed"):
+                                  skip_reason = str(eff)
+                                  break
+                 
+                 if skip_reason:
+                      self.log(f"[{team}.{verb}] Exclusive Activity: Skipping '{item.chain_node}' (state={skip_reason})")
+                      res_val = item.payload # Reuse payload as result
+                      member_idx = -1
+                 else:
+                      # Maestro Path Awareness: pass binary path to AI
+                      if item.process_node:
+                          for pname, pinfo in self.processes.items():
+                              if item.process_node in pinfo["nodes"]:
+                                  kwargs["maestro_path"] = self._get_binary_path(pname, item.process_node)
+                                  break
+                      
+                       item.log_activity(team, verb, "Processing...")
+                       
+                       if self.dry_run:
+                           self.log(f"[dry_run] Skip {team}.{verb}")
+                           res_val = TypedValue(ValueTag.Unknown, meta={"text": "dry_run"})
+                           member_idx = self._select_team_member(team) # Still increment index for sequential handover
+                       else:
+                           res_val, member_idx = self._execute_single_action(team, verb, i_args, kwargs, ctx)
+                       
+                       item.log_activity(team, verb, res_val, member_idx=member_idx)
+                      
+                      # 8. Data Chains: Implicit Communication
+                      if item.chain_node:
+                          for cname, cinfo in self.chains.items():
+                              if item.chain_node in cinfo["nodes"]:
+                                  # Propagate completion through the System Sequence
+                                  self._chain_call(cname, "propagate", [item.chain_node, "satisfied"], {}, ctx)
+                                  break
+                      
+                      # 9. Process Trees: Maestro Auditing
+                      if item.process_node:
+                          for pname, pinfo in self.processes.items():
+                              if item.process_node in pinfo["nodes"]:
+                                  # Record accomplishment in the family tree
+                                  pinfo["marks"][item.process_node] = f"Accomplished: {team}.{verb}"
+                                  self.log(f"[maestro] Mapped Order to Process Branch: {pname}/{item.process_node}")
+                                  break
+                 
+                 results.append(res_val)
+            
+            final_result = TypedValue(ValueTag.List, value=results)
         else:
-            if self.ai_provider:
-                result = self.ai_provider.execute(team, verb, args, kwargs)
-            elif self.ai_client:
-                result = self._ai_command(team, verb, args, kwargs, member_idx)
+            if self.dry_run:
+                self.log(f"[dry_run] Skip {team}.{verb}")
+                final_result = TypedValue(ValueTag.Unknown, meta={"text": "dry_run"})
+                member_idx = self._select_team_member(team)
             else:
-                result = self._fake_command(team, verb, args, kwargs, member_idx)
-        ctx.variables["__monologue_history__"] = kwargs.get("history", [])
-        ctx.variables["_"] = result
+                final_result, member_idx = self._execute_single_action(team, verb, args, kwargs, ctx)
+            
+            # 6. Concept Alignment: Result Promotion to Order
+            # If the result is not already an Order, wrap it so it has a lifecycle
+            if not isinstance(final_result, Order) and verb in verb_kind_map:
+                 final_result = Order(
+                     id=f"order_{self.metrics['actions']}",
+                     payload=final_result,
+                     kind=req_kind
+                 )
+        
+        ctx.variables["_"] = final_result
+        # Update monologue history if it was updated in kwargs
+        if "history" in kwargs:
+             ctx.variables["__monologue_history__"] = kwargs["history"]
+
+    def _execute_single_action(self, team: str, verb: str, args: List[Any], kwargs: Dict[str, Any], ctx: EvalContext) -> Tuple[Any, int]:
+        member_idx = self._select_team_member(team)
+        if verb == "ask":
+             prev = ctx.variables.get("__monologue_history__", [])
+             prompt = args[0]
+             if hasattr(prompt, "payload"): 
+                 prompt = prompt.payload
+             prev.append(str(prompt))
+             kwargs["history"] = prev
+
+        if self.tracer:
+             with self.tracer.start_as_current_span(f"action:{team}.{verb}"):
+                 result = self._dispatch_provider(team, verb, args, kwargs, member_idx)
+        else:
+             result = self._dispatch_provider(team, verb, args, kwargs, member_idx)
+        
+        # Metrics and Logging
         self.metrics["actions"] += 1
         self.metrics["verbs"][verb] = self.metrics["verbs"].get(verb, 0) + 1
-        self.log(f"[{team}#{member_idx}.{verb}] -> {result}")
+        self.log(f"[{team}#{member_idx or 0}.{verb}] -> {result}")
+        return result, member_idx
+
+    def _dispatch_provider(self, team: str, verb: str, args: List[Any], kwargs: Dict[str, Any], member_idx: int) -> Tuple[Any, int]:
+        if self.ai_provider:
+            return self.ai_provider.execute(team, verb, args, kwargs), member_idx
+        elif self.ai_client:
+            return self._ai_command(team, verb, args, kwargs, member_idx), member_idx
+        else:
+            return self._fake_command(team, verb, args, kwargs, member_idx), member_idx
+
 
     def _ai_command(self, team: str, verb: str, args: List[Any], kwargs: Dict[str, Any], member_idx: int | None = None) -> Any:
         """Execute a verb through an AI model. All teams route here; team is only contextual.
