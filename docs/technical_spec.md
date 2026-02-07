@@ -1,8 +1,8 @@
-# FlowLang Technical Specification v1.0
+## 1. Philosophy: Occupational Programming & Architectural Governance
 
-## 1. Philosophy: Occupational Programming
+FlowLang is a **Meta-Language (لغة فوقية)** that reimagines programming constructs through the lens of **Management Science** and **Architectural Governance**. It is designed to sit *above* execution-tier languages (JavaScript, C++, Go) to orchestrate intelligent agents executing commands within a deterministic system structure.
 
-FlowLang reimagines programming constructs through the lens of **Management Science** and **Digital Product Development**. Instead of processing raw data, FlowLang orchestrates *intelligent agents* executing *commands* within a *system structure*.
+FlowLang converts **probabilistic** AI behavior into **deterministic** professional outcomes by enforcing high-granularity checkpoints and structural constraints.
 
 | Traditional Construct | FlowLang Equivalent | Rationale |
 |-----------------------|---------------------|-----------|
@@ -147,3 +147,19 @@ All verbs are routed to an AI backend. Expected JSON schemas:
 - Extend grammar in `grammar.lark`.
 - Implement new merge policies in `runtime.py`.
 - Add AI providers in `ai_providers.py`.
+
+---
+
+## 8. Architectural Governance
+
+FlowLang acts as the **Governance Layer** for AI-integrated systems. It operates on three pillars:
+
+### 8.1 Orchestration vs. Execution
+- **The Orchestrator (FlowLang)**: Manages state, professional roles, and the causality of work (Who, When, Where).
+- **The Executor (External Language)**: Handles functional side-effects, I/O, and platform-specific logic (How).
+
+### 8.2 Deterministic Bridge
+By wrapping probabilistic AI calls in **Checkpoints** and **Process Nodes**, FlowLang ensures that execution follows a strict audit path. A failure in a `Judge` command or a missing `Mark` on a process node can deterministicly block downstream execution tiers.
+
+### 8.3 Contextual Pruning (RAM as Reports)
+To maintain long-term stability in complex jobs, FlowLang "dumps" working memory at every checkpoint, preserving only high-fidelity reports. This prevents the accumulation of context noise that leads to AI failure in real-world scenarios.

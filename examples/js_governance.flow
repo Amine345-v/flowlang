@@ -1,0 +1,18 @@
+// JS Governance Flow: Demonstrating cross-language orchestration
+
+// The team now uses an inline connector to call the JS SDK
+team legal_js : Command<Judge> [size=1, connector="node sdk/js/worker_demo.js"];
+
+flow js_audit_flow(using: legal_js) {
+    checkpoint "legal_review" (report: audit_result) {
+        // This will trigger the JS worker via the connector
+        audit_result = legal_js.judge("This is a CONFIDENTIAL document.");
+        
+        if (audit_result.pass) {
+            flow.end
+        } else {
+            // Governance enforcement: In a real scenario, we might retry or escalate
+            flow.end
+        }
+    }
+}

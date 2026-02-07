@@ -1,0 +1,40 @@
+// Medical-Legal Governance Flow
+
+// 1. Policy for external execution (Shell Connector)
+policy diagnostic_policy {
+    vars: {
+        connector: {
+            "search": "python scripts/mock_diag.py"
+        }
+    }
+}
+
+// 2. Workforce Configuration
+team diag_tool : Command<Search> [size=1, policy=diagnostic_policy];
+team medical_board : Command<Judge> [size=1];
+team legal_council : Command<Judge> [size=1];
+
+// 3. The Conductor: Integrating Layers
+flow medical_legal_auth(using: medical_board, legal_council, diag_tool) {
+    
+    // Stage 1: External Tier
+    checkpoint "external_diagnosis" (report: raw_output) {
+        raw_output = diag_tool.search("General Health Check");
+    }
+
+    // Stage 2: Medical Governance
+    checkpoint "medical_verification" (report: validated_diag) {
+        validated_diag = medical_board.judge(raw_output, criteria="Clinical Safety");
+    }
+
+    // Stage 3: Legal Governance
+    checkpoint "legal_clearance" (report: final_approval) {
+        final_approval = legal_council.judge(validated_diag, criteria="HIPAA Compliance");
+        
+        if (final_approval.pass) {
+            flow.end;
+        } else {
+            flow.back_to("medical_verification");
+        }
+    }
+}

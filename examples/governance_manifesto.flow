@@ -1,0 +1,18 @@
+// Governance Manifesto: Proving FlowLang Law Enforcement
+
+policy strict_legal_law {
+    rules: ["Strict"];
+}
+
+// Any worker (JS/C++/Python) under this policy is subject to hard law validation
+team legal_js : Command<Judge> [size=1, connector="node sdk/js/worker_demo.js", policy=strict_legal_law];
+
+flow show_governance(using: legal_js) {
+    checkpoint "audit" (report: result) {
+        // We pass 'SECRET' to trigger a 'pass: false' in the JS worker logic
+        result = legal_js.judge("DATA: TOP SECRET CONTENT");
+        
+        // The Conductor will see result.content.pass == false 
+        // and because of 'strict_legal_law' (Strict), it will flag it.
+    }
+}

@@ -34,7 +34,7 @@ ident_or_string_list: ident_or_string ("," ident_or_string)*
 
 team_decl: "team" IDENT ":" "Command" "<" COMMAND_KIND ">" "[" team_opts "]" ";"
 team_opts: team_opt ("," team_opt)*
-team_opt: "size" "=" NUMBER | "role" "=" IDENT | "policy" "=" IDENT | "distribution" "=" ("round_robin"|"weighted"|"priority")
+team_opt: "size" "=" NUMBER | "role" "=" IDENT | "policy" "=" IDENT | "distribution" "=" ("round_robin"|"weighted"|"priority") | "connector" "=" STRING
 
 chain_decl: "chain" IDENT "{" "nodes" ":" "[" ident_list? "]" ";" "propagation" ":" "causal" "(" prop_args? ")" ";" ("labels" ":" "{" label_kv_list? "}" ";")? ("constraints" ":" "{" constraint_item* "}" ";")? "}"
 prop_args: prop_arg ("," prop_arg)*
