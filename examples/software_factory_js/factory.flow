@@ -1,0 +1,78 @@
+// Software Factory: Separation of Concerns
+
+process software_project "Software Lifecycle" {
+    root: "App";
+    branch "App" -> ["Backend", "Frontend"];
+    
+    node "Market-Research" { status: "pending"; };
+    node "API-Design" { status: "pending"; };
+    node "Implementation" { status: "pending"; };
+    node "Deployment" { status: "pending"; };
+}
+
+chain production_line {
+    nodes: [Research, Design, Implementation, Deploy];
+    propagation: causal(decay=1.0, forward=false); 
+}
+
+// 3. Teams
+team researcher : Command<Search> [size=1, connector="node researcher.js"];
+team architect  : Command<Try>    [size=1, connector="node architect.js"];
+team dev_team   : Command<Try>    [size=1, connector="node developer.js"];
+team qa_engine  : Command<Judge>  [size=1, connector="node qa_engine.js"];
+team deployer   : Command<Try>    [size=1, connector="node deployer.js"];
+
+// 4. The Flow
+flow build_feature(using: researcher, architect, dev_team, qa_engine) {
+    
+    // Checkpoint 1: Discovery
+    checkpoint "market_discovery" (report: m_report) {
+         m_report = researcher.search("ERP-Core");
+         software_project.mark("Market-Research", "Updated");
+         production_line.touch("Research");
+    }
+
+    // Checkpoint 2: Design (Guidance)
+    checkpoint "tech_design" (report: d_spec) {
+         // Architect produces a Spec, NOT code.
+         d_spec = architect.try("design", {"requirements": m_report});
+         software_project.mark("API-Design", "Spec-Ready");
+         production_line.touch("Design");
+    }
+
+    // Checkpoint 3: Implementation (Execution)
+    checkpoint "impl_code" (report: code_result) {
+         // Developer writes code based on Architect's guidance
+         code_result = dev_team.try("implement", {"spec": d_spec});
+         software_project.mark("Implementation", "Coded");
+         production_line.touch("Implementation");
+    }
+
+    // Checkpoint 4: QA
+    checkpoint "qa_gate" (report: approval) {
+         approval = qa_engine.judge(code_result);
+         
+         // Drift Check
+         echo = researcher.search("check_drift", {"current_spec": m_report});
+         
+         if (echo.drift_detected) {
+             flow.back_to("market_discovery")
+         } else {
+             if (approval.pass) {
+                 software_project.mark("Implementation", "Released");
+             } else {
+                 software_project.mark("Implementation", "Fixing");
+                 flow.back_to("impl_code")
+             }
+         }
+    }
+
+    // Checkpoint 5: Deployment (The Production Stage)
+    checkpoint "release_candidate" (report: manifest) {
+         confirm("Deploy to Production?") -> user_approval;
+         manifest = deployer.try("deploy", {"files": code_result});
+         software_project.mark("Deployment", "Released");
+         production_line.touch("Deploy");
+         flow.end
+    }
+}

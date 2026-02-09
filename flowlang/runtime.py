@@ -42,10 +42,13 @@ class EvalContext:
     back_to_target: Optional[str] = None
     reports: List[Any] = None
     merge_policy: str = "last_wins"
+    critical_features: List[Any] = None # System Tree: Commanding Traces
 
     def __post_init__(self):
         if self.reports is None:
             self.reports = []
+        if self.critical_features is None:
+            self.critical_features = []
 
 class Runtime:
     def __init__(self, dry_run: bool = False):
@@ -206,6 +209,9 @@ class Runtime:
                 self.log(f"[persistence] Saved state to {saved_path}")
             except Exception as e:
                 self.log(f"[persistence] Failed to save state: {e}")
+
+            # IDE Integration: Live Export
+            self._export_ide_state(name, ctx)
 
             if ctx.back_to_target is not None:
                 target = ctx.back_to_target
@@ -1131,6 +1137,12 @@ class Runtime:
                         res_val = TypedValue(ValueTag.Unknown, meta={"text": "dry_run"})
                         member_idx = self._select_team_member(team)
                     else:
+                        # Extract critical features to act as "Current" (التيار)
+                        if hasattr(item, "critical_features") and item.critical_features:
+                            kwargs["critical_features"] = [
+                                {"name": f.name, "value": f.value, "impact": f.impact}
+                                for f in item.critical_features
+                            ]
                         res_val, member_idx = self._execute_single_action(team, verb, i_args, kwargs, ctx)
                     
                     item.log_activity(team, verb, res_val, member_idx=member_idx)
@@ -1332,6 +1344,11 @@ class Runtime:
             user_content = {"verb": verb, "team": team, "target": target, "criteria": criteria, "options": kwargs}
         else:
             user_content = {"verb": verb, "team": team, "args": args, "options": kwargs}
+
+        # Inject Commanding Traces (الأثر الأمري)
+        if "critical_features" in kwargs:
+            user_content["commanding_traces"] = kwargs["critical_features"]
+            system_msg += "\nIMPORTANT: Follow these Commanding Traces strictly as they represent the CURRENT of the work."
 
         # Call the model
         try:
@@ -1581,3 +1598,128 @@ class Runtime:
 
     def _truthy(self, v: Any) -> bool:
         return bool(v)
+    def _export_ide_state(self, flow_name: str, ctx: EvalContext):
+        export_path = os.getenv("FLOWLANG_IDE_EXPORT_PATH")
+        if not export_path:
+            return
+            
+        # 1. Flow Map
+        flow_data = {
+            "id": flow_name,
+            "name": flow_name,
+            "team": [],
+            "checkpoints": [{"id": cp, "name": cp} for cp in ctx.checkpoints],
+            "currentCheckpointIndex": ctx.checkpoints.index(ctx.current_stage) if ctx.current_stage in ctx.checkpoints else 0
+        }
+        
+        seen_ids = set()
+        
+        def add_order(o):
+            if hasattr(o, "id") and o.id not in seen_ids:
+                flow_data["team"].append({
+                    "id": o.id,
+                    "type": str(o.kind).upper() if hasattr(o, "kind") else "TRY",
+                    "content": str(o.payload)[:50] + "...", 
+                    "status": "completed",
+                    "result": str(o.payload)
+                })
+                seen_ids.add(o.id)
+
+        for k, v in ctx.variables.items():
+            if isinstance(v, Order):
+                add_order(v)
+            elif isinstance(v, list):
+                for item in v:
+                    if isinstance(item, Order):
+                        add_order(item)
+
+        # 2. Chain Map
+        chain_data = []
+        for cname, cinfo in self.chains.items():
+            for node in cinfo["nodes"]:
+                eff = cinfo["effects"].get(node, 0)
+                status = "active" if eff > 0 else "pending"
+                if eff == "satisfied": status = "completed"
+                chain_data.append({
+                    "id": f"{cname}_{node}",
+                    "order": { 
+                        "id": f"dummy_{node}", 
+                        "type": "TRY", 
+                        "content": f"{cname}: {node}", 
+                        "status": status
+                    },
+                    "impactLevel": 1
+                })
+
+        # 3. Tree Map (Maestro)
+        tree_data = None
+        if self.processes:
+            pname = list(self.processes.keys())[0]
+            pinfo = self.processes[pname]
+            root_node = pinfo["root"]
+            
+            def build_tree(node_name):
+                children_names = pinfo["branches"].get(node_name, [])
+                status_raw = pinfo["marks"].get(node_name, "healthy")
+                
+                status_map = {
+                    "pending": "expanded",
+                    "Updated": "healthy",
+                    "Refined": "healthy",
+                    "Coded": "healthy",
+                    "Released": "healthy",
+                    "Fixing": "atrophied"
+                }
+                
+                # Default logic if not in map
+                ide_status = status_map.get(str(status_raw), "healthy")
+
+                node_obj = {
+                    "id": node_name,
+                    "name": node_name,
+                    "geneticCode": self._get_binary_path(pname, node_name),
+                    "type": "root" if node_name == root_node else ("branch" if children_names else "leaf"),
+                    "status": ide_status,
+                }
+                if children_names:
+                    node_obj["children"] = [build_tree(c) for c in children_names]
+                return node_obj
+            
+            if root_node:
+                tree_data = build_tree(root_node)
+        
+        # 4. Files Map (Artifacts)
+        files_data = []
+        # Current directory of execution (likely the factory or project root)
+        # We look for files in the current directory or a 'dist' folder if it exists
+        search_paths = [".", "./dist"]
+        for sp in search_paths:
+            if os.path.exists(sp):
+                for f in os.listdir(sp):
+                    if f.endswith(".js") or f.endswith(".test.js") or f.endswith(".json"):
+                        fpath = os.path.join(sp, f)
+                        if os.path.isfile(fpath):
+                            try:
+                                with open(fpath, 'r', encoding='utf-8') as file_ref:
+                                    content = file_ref.read()
+                                files_data.append({
+                                    "name": f,
+                                    "content": content,
+                                    "status": "healthy"
+                                })
+                            except Exception:
+                                pass
+
+        full_export = {
+            "flow": flow_data,
+            "chain": chain_data,
+            "tree": tree_data,
+            "files": files_data
+        }
+        
+        try:
+            with open(export_path, 'w', encoding='utf-8') as f:
+                json.dump(full_export, f, indent=2)
+            self.log(f"[IDE] Exported state to {export_path}")
+        except Exception as e:
+            self.log(f"[IDE] Failed to export state: {e}")

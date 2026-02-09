@@ -1,0 +1,59 @@
+// Universal Professional Registry for JOL Studio 360
+
+// 1. Resource Definitions (Software Integrities)
+resource Excel : Tool {
+    type: "Spreadsheet";
+    integrity_check: "formula_validation";
+}
+
+resource SecurityScanner : Tool {
+    type: "CyberAudit";
+    integrity_check: "vulnerability_scan";
+}
+
+resource CADViewer : Tool {
+    type: "3D_Sim";
+    integrity_check: "structural_metadata";
+}
+
+resource SpiceSim : Tool {
+    type: "Circuit_Sim";
+    integrity_check: "logic_validation";
+}
+
+// 2. Professional Roles
+role Economist {
+    capabilities: [analyze_budget, forecast_metrics, audit_financials];
+    vars: {
+        active_sheet: string;
+        currency: string;
+    }
+}
+
+role CyberExpert {
+    capabilities: [penetration_test, harden_runtime, audit_logs];
+    vars: {
+        threat_level: number;
+        secure_gate: boolean;
+    }
+}
+
+role MechanicalEngineer {
+    capabilities: [simulate_stress, validate_geometry, export_cad];
+    vars: {
+        tolerance: number;
+        material: string;
+    }
+}
+
+role ElectronicsEngineer {
+    capabilities: [simulate_circuit, routing_check, thermal_analysis];
+    vars: {
+        voltage_limit: number;
+    }
+}
+
+// 3. Global Registry Team Definitions
+team market_analyst : Command<Search> [size=1, role=Economist, connector="node economist.js"];
+team security_audit : Command<Judge>  [size=1, role=CyberExpert, connector="node cyber_expert.js"];
+team hardware_sim   : Command<Try>    [size=1, role=MechanicalEngineer, connector="node meca_sim.js"];

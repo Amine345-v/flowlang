@@ -1,0 +1,14 @@
+// verify_jol.flow
+team economist : Command<Search> [size=1, connector="node examples/software_factory_js/economist.js"];
+team mechanic  : Command<Try>    [size=1, connector="node examples/software_factory_js/meca_sim.js"];
+
+flow verify_traces(using: economist, mechanic) {
+    checkpoint "step1" (report: eco_rep) {
+        eco_rep = economist.search("budget_check");
+    }
+    
+    checkpoint "step2" (report: meca_res) {
+        // meca_res should show it received the commanding traces in its log
+        meca_res = mechanic.try("physics_test", {"prev_data": eco_rep});
+    }
+}

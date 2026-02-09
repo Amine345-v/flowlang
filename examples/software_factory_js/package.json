@@ -1,0 +1,12 @@
+{
+    "name": "flowlang-software-factory",
+    "version": "1.0.0",
+    "description": "A maximal-granularity software development simulation using FlowLang.",
+    "main": "run_factory.js",
+    "scripts": {
+        "start": "node run_factory.js"
+    },
+    "dependencies": {
+        "flowlang-js": "file:../../sdk/js"
+    }
+}

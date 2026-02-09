@@ -1,0 +1,87 @@
+// E-Commerce Order Lifecycle: "The Software Factory of Orders"
+
+// 1. The Maestro: Order Process Tree
+process order_tracker "Order Lifecycle" {
+    root: "Order";
+    branch "Order" -> ["Validation", "Financial", "Logistics"];
+    
+    node "Fraud-Check" { status: "pending"; };
+    node "Inventory-Reserve" { status: "pending"; };
+    node "Payment-Capture" { status: "pending"; };
+    node "Shipping-Label" { status: "pending"; };
+}
+
+// 2. Teams (JS SDK Workers)
+team fraud_guard   : Command<Judge> [size=1, connector="node fraud_engine.js"];
+team inventory_sys : Command<Try>   [size=1, connector="node inventory_worker.js"];
+team bank_gateway  : Command<Try>   [size=1, connector="node payment_worker.js"];
+team logistics     : Command<Search>[size=1, connector="node logistics_worker.js"];
+
+// 3. The Flow: Orchestrating the Lifecycle
+flow manage_order_lifecycle(order_id: string, amount: number, user_risk_score: number) {
+
+    // --- Phase 1: Validation ---
+    
+    checkpoint "security_gate" (report: fraud_result) {
+        fraud_result = fraud_guard.judge({
+            "amount": amount,
+            "risk_score": user_risk_score
+        });
+        
+        if (fraud_result.pass) {
+             order_tracker.mark("Fraud-Check", "Passed");
+        } else {
+             order_tracker.mark("Fraud-Check", "Failed");
+             flow.end;
+        }
+    }
+
+    checkpoint "inventory_gate" (report: stock_status) {
+        stock_status = inventory_sys.try("reserve", {"order_id": order_id});
+        
+        if (stock_status.success) {
+            order_tracker.mark("Inventory-Reserve", "Reserved");
+        } else {
+            order_tracker.mark("Inventory-Reserve", "Out-Of-Stock");
+            flow.end; // Or trigger "Backorder" flow
+        }
+    }
+    
+    order_tracker.mark("Validation", "Complete");
+
+
+    // --- Phase 2: Financial ---
+
+    checkpoint "payment_processing" (report: txn_result) {
+        txn_result = bank_gateway.try("charge", {
+            "order_id": order_id, 
+            "amount": amount
+        });
+
+        if (txn_result.success) {
+            order_tracker.mark("Payment-Capture", "Paid");
+            order_tracker.mark("Financial", "Settled");
+        } else {
+            order_tracker.mark("Payment-Capture", "Declined");
+            // Reverse inventory?
+            // inventory_sys.try("release", {"order_id": order_id});
+            flow.end;
+        }
+    }
+
+
+    // --- Phase 3: Logistics ---
+
+    checkpoint "fulfillment" (report: shipping_info) {
+        // Search for best carrier
+        shipping_info = logistics.search({
+            "destination": "NY", 
+            "weight": 2.5
+        });
+        
+        order_tracker.mark("Shipping-Label", "Generated");
+        order_tracker.mark("Logistics", "Dispatched");
+    }
+    
+    order_tracker.mark("Order", "Completed");
+}

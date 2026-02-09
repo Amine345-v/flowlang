@@ -1,0 +1,2 @@
+﻿[PM] Requesting Software Build: Enterprise-Resource-Planning-Core-V2 (Team: Research -> Architect -> Dev -> QA)
+[IDE] Live state export enabled: C:\Users\asusu\CascadeProjects\flowlang\flowlang\jol-ide---┘äÏ║Ï®-Ï¿Ï▒┘àÏ¼Ï®-Ïº┘ä┘à┘ç┘å\public\ide_state.json

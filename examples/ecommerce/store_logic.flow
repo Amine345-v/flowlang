@@ -1,0 +1,44 @@
+// 1. Define Teams (Microservices / Workers)
+// Uses the JS SDK connector for all logic
+team fraud_guard : Command<Judge> [size=1, connector="node fraud_engine.js"];
+team inventory_sys : Command<Try> [size=1, connector="node inventory_worker.js"];
+
+// 2. Define Policy
+policy strict_commerce {
+    rules: ["AuditTrail", "Deterministic"];
+}
+
+// 3. The Order Process
+flow process_order(order_id: string, amount: number, user_risk_score: number) {
+    
+    // Step 1: Fraud Check
+    checkpoint "risk_analysis" (report: fraud_result) {
+        // AI or Logic checks if the order is safe
+        fraud_result = fraud_guard.judge({
+            "amount": amount,
+            "risk_score": user_risk_score
+        });
+
+        if (fraud_result.pass == false) {
+            // REJECT ORDER
+            flow.end
+        }
+    }
+
+    // Step 2: Inventory Reservation
+    checkpoint "stock_check" (report: inventory_status) {
+        inventory_status = inventory_sys.try("reserve", {"order_id": order_id});
+        
+        if (inventory_status.success == false) {
+            // OUT OF STOCK
+            flow.end
+        }
+    }
+
+    // Step 3: Fulfillment (Implicit Approval)
+    checkpoint "fulfillment" (report: final_status) {
+        // Here we would call a shipping API
+        // For demo, we just return success
+        final_status = { "status": "shipped", "tracking": "TK-12345" };
+    }
+}

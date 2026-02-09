@@ -1,0 +1,13 @@
+{
+    "name": "flowlang-ecommerce-example",
+    "version": "1.0.0",
+    "description": "Demonstrates FlowLang governance in a simulated E-Commerce environment.",
+    "main": "api_simulation.js",
+    "scripts": {
+        "start": "node api_simulation.js",
+        "test": "node verify_output.js"
+    },
+    "dependencies": {
+        "flowlang-js": "file:../../sdk/js"
+    }
+}
