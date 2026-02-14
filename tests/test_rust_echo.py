@@ -20,9 +20,9 @@ class TestRustEcho(unittest.TestCase):
 
     def test_basic_graph_ops(self):
         """Test basic node/edge operations in Rust engine."""
-        self.assertTrue(self.engine.add_node("A"))
-        self.assertFalse(self.engine.add_node("A")) # Duplicate
-        self.engine.add_node("B")
+        self.assertTrue(self.engine.add_node("A", 0.0))
+        self.assertFalse(self.engine.add_node("A", 0.0)) # Duplicate
+        self.engine.add_node("B", 0.0)
         self.assertTrue(self.engine.add_edge("A", "B"))
         
         self.assertTrue(self.engine.is_dag())
@@ -37,8 +37,14 @@ class TestRustEcho(unittest.TestCase):
         """Test that Rust propagation matches expected decay logic."""
         # Chain: A -> B -> C -> D
         # Effect at A=1.0, decay=0.5
+        # Mass=0.0 (Superconductor) -> inertia factor = 1.0
         # Expected: A=1.0, B=0.5, C=0.25, D=0.125
         order = ["A", "B", "C", "D"]
+        self.engine.add_node("A", 0.0)
+        self.engine.add_node("B", 0.0)
+        self.engine.add_node("C", 0.0)
+        self.engine.add_node("D", 0.0)
+        
         res = self.engine.propagate(order, "A", 1.0, 0.5, None, True, False)
         
         self.assertAlmostEqual(res["A"], 1.0)
@@ -50,6 +56,11 @@ class TestRustEcho(unittest.TestCase):
         """Benchmark Rust speed on a large chain."""
         size = 10000
         order = [str(i) for i in range(size)]
+        
+        # Pre-populate graph with Superconductors (Mass 0.0)
+        # to ensure signal travels the full length for stress testing.
+        for node in order:
+            self.engine.add_node(node, 0.0)
         
         start = time.time()
         # Propagate from middle

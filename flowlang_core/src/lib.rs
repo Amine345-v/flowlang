@@ -1,5 +1,4 @@
 use pyo3::prelude::*;
-
 use std::collections::HashMap;
 
 mod propagation;
@@ -7,7 +6,7 @@ mod propagation;
 use propagation::PropagationEngine;
 
 /// High-performance echo propagation engine for FlowLang.
-/// This is the "muscle" (العضلات) — Python handles the brain, Rust handles the speed.
+/// This includes the Deep Tech "Damping Kernel".
 #[pyclass]
 pub struct EchoEngine {
     engine: PropagationEngine,
@@ -22,9 +21,12 @@ impl EchoEngine {
         }
     }
 
-    /// Add a named node to the graph.
-    fn add_node(&mut self, name: String) -> bool {
-        self.engine.add_node(name)
+    /// Add a named node to the graph with a specific mass (inertia).
+    /// Low mass = high criticality (transmits well).
+    /// High mass = low importance (dampens well).
+    #[pyo3(signature = (name, mass=1.0))]
+    fn add_node(&mut self, name: String, mass: f64) -> bool {
+        self.engine.add_node(name, mass)
     }
 
     /// Add a directed edge (from → to). Returns false if it would create a cycle.
@@ -83,10 +85,7 @@ impl EchoEngine {
     }
 
     /// THE HOT PATH: Bidirectional decay propagation.
-    /// Given an ordered chain of nodes, propagates an effect from a source node
-    /// with exponential decay in both directions.
-    ///
-    /// Returns: HashMap<node_name, propagated_effect_value>
+    /// Uses the Damping Kernel for physics-based inertia.
     #[pyo3(signature = (order, source_node, effect, decay=0.6, cap=None, forward=true, backward=true))]
     fn propagate(
         &self,
@@ -109,24 +108,6 @@ impl EchoEngine {
         )
     }
 
-    /// Batch propagation: process multiple chains at once.
-    /// Each chain is (order, source_node, effect, decay, cap, forward, backward).
-    /// Returns merged results across all chains.
-    fn propagate_batch(
-        &self,
-        chains: Vec<(Vec<String>, String, f64, f64, Option<f64>, bool, bool)>,
-    ) -> HashMap<String, f64> {
-        let mut merged = HashMap::new();
-        for (order, source, effect, decay, cap, fwd, bwd) in chains {
-            let result = self.engine.propagate(&order, &source, effect, decay, cap, fwd, bwd);
-            for (k, v) in result {
-                let entry = merged.entry(k).or_insert(0.0f64);
-                *entry = entry.max(v);
-            }
-        }
-        merged
-    }
-
     fn __repr__(&self) -> String {
         format!(
             "EchoEngine(nodes={}, edges={}, is_dag={})",
@@ -137,7 +118,6 @@ impl EchoEngine {
     }
 }
 
-/// FlowLang Core — Rust-accelerated engine
 #[pymodule]
 fn flowlang_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EchoEngine>()?;

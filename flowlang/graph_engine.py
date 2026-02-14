@@ -60,7 +60,17 @@ class SystemTreeEngine:
         # Add the node
         self.graph.add_node(fid, data=feature)
         if self.rust_engine:
-            self.rust_engine.add_node(fid)
+            # PHYSICS OF LOGIC: Calculate Mass based on Echo Signature
+            # LOW -> High Mass (Damps volatility)
+            # CRITICAL -> Low Mass (Transmits efficiently)
+            sig = str(getattr(feature, 'echo_signature', 'MEDIUM'))
+            mass = 1.0
+            if sig == 'LOW': mass = 10.0
+            elif sig == 'MEDIUM': mass = 5.0
+            elif sig == 'HIGH': mass = 1.0
+            elif sig == 'CRITICAL': mass = 0.1
+            
+            self.rust_engine.add_node(fid, mass)
         
         # Add the ancestry edge
         ancestry = getattr(feature, 'ancestry_link', None)
