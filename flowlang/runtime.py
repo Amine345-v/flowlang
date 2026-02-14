@@ -171,6 +171,12 @@ class Runtime:
         ctx = EvalContext(variables=ctx_vars, checkpoints=checkpoints_names, merge_policy=merge_policy)
         self.log(f"[flow] Start '{name}' with checkpoints: {checkpoints_names}")
         pc = 0
+        
+        # Shadow State Storage for this run
+        # Map: checkpoint_name -> (DeepCopied Context, RollbackCount)
+        shadow_states: Dict[str, Any] = {}
+        rollback_counts: Dict[str, int] = {}
+        MAX_ROLLBACKS = 10
 
         if resume_state:
             # Fast forward
@@ -185,6 +191,14 @@ class Runtime:
             cp_node = checkpoints_nodes[pc]
             cp_name = cp_node.children[0].value
             ctx.current_stage = cp_name
+            
+            # Protocol 5: Shadow State Capture
+            # Save state BEFORE execution of the block
+            # We use deepcopy to ensure isolation
+            import copy
+            shadow_states[cp_name] = copy.deepcopy(ctx)
+            rollback_counts.setdefault(cp_name, 0)
+            
             self.log(f"[checkpoint] -> {cp_name}")
             self.metrics["checkpoints"] += 1
             t0 = time.perf_counter()
@@ -251,6 +265,20 @@ class Runtime:
                 target = ctx.back_to_target
                 if target not in ctx.checkpoints:
                     raise RuntimeFlowError(f"back_to unknown checkpoint '{target}'")
+                
+                # Protocol 5: Shadow State Restoration
+                if target in shadow_states:
+                    rollback_counts[target] += 1
+                    if rollback_counts[target] > MAX_ROLLBACKS:
+                         raise RuntimeFlowError(f"Infinite Shadow Loop detected: rolled back to '{target}' {MAX_ROLLBACKS}+ times")
+                    
+                    saved_ctx = shadow_states[target]
+                    # Restore variables and reports
+                    ctx.variables = copy.deepcopy(saved_ctx.variables)
+                    ctx.reports = copy.deepcopy(saved_ctx.reports)
+                    # Other context fields like checkpoints/merge_policy are static or handled by flow structure
+                    self.log(f"[rollback] Restored Shadow State for '{target}' (Count: {rollback_counts[target]})")
+                
                 pc = ctx.checkpoints.index(target)
                 self.log(f"[flow] back_to -> {target}")
                 ctx.back_to_target = None
@@ -546,6 +574,63 @@ class Runtime:
         else:
             raise RuntimeFlowError(f"Unknown context op {op}")
 
+    def preview_impact(self, chain_name: str, node_name: str, effect: Any) -> Dict[str, Any]:
+        """Simulates the impact of a change on a chain without applying it. (Echo Simulator)"""
+        ch = self.chains.get(chain_name)
+        if not ch:
+            return {}
+        # Clone effects to simulate
+        sim_effects = dict(ch.get("effects", {}))
+        self._compute_propagation(ch, node_name, effect, sim_effects)
+        return sim_effects
+
+    def _compute_propagation(self, ch: Dict[str, Any], node_name: str, effect: Any, effects_dict: Dict[str, Any]):
+        """Helper to compute propagation effects based on chain topology."""
+        if str(node_name) not in ch["nodes"]:
+            return # Should strict check elsewhere/caller
+        
+        effects_dict[str(node_name)] = effect
+        order = ch["order"]
+        decay = float(ch["propagation"].get("decay", 0.6))
+        do_fwd = bool(ch["propagation"].get("forward", True))
+        do_bwd = bool(ch["propagation"].get("backprop", True))
+        cap = ch["propagation"].get("cap")
+        
+        try:
+            idx = order.index(str(node_name))
+        except ValueError:
+            idx = None
+            
+        if idx is not None:
+            # forward diffusion
+            if do_fwd:
+                cur = effect
+                j = idx + 1
+                while j < len(order):
+                    # numeric decay only if numeric
+                    if isinstance(cur, (int, float)):
+                        cur = float(cur) * decay
+                        # Logical Firewall: Stop if below threshold (cap)
+                        if cap is not None and isinstance(cap, (int, float)) and cur < float(cap):
+                            break
+                        effects_dict[order[j]] = max(cur, effects_dict.get(order[j], 0))
+                    else:
+                        effects_dict[order[j]] = cur
+                    j += 1
+            # backward diffusion
+            if do_bwd:
+                cur = effect
+                j = idx - 1
+                while j >= 0:
+                    if isinstance(cur, (int, float)):
+                        cur = float(cur) * decay
+                        if cap is not None and isinstance(cap, (int, float)) and cur < float(cap):
+                            break
+                        effects_dict[order[j]] = max(cur, effects_dict.get(order[j], 0))
+                    else:
+                        effects_dict[order[j]] = cur
+                    j -= 1
+
     def _exec_chain_touch(self, node: Tree, ctx: EvalContext):
         chain_name = str(node.children[0])
         node_name = node.children[1].value
@@ -558,50 +643,21 @@ class Runtime:
         # Default effect if not provided
         if effect is None:
             effect = 1.0
-        # Apply effect and propagate using the chain's configured propagation policy
+            
         ch = self.chains.get(chain_name)
         if not ch:
             raise RuntimeFlowError(f"Unknown chain '{chain_name}'")
         if str(node_name) not in ch["nodes"]:
             raise RuntimeFlowError(f"Chain '{chain_name}' has no node '{node_name}'")
-        ch["effects"][str(node_name)] = effect
-        order = ch["order"]
+            
+        # Use helper for actual application
+        self._compute_propagation(ch, node_name, effect, ch["effects"])
+        
+        # Log params for debug
         decay = float(ch["propagation"].get("decay", 0.6))
+        cap = ch["propagation"].get("cap")
         do_fwd = bool(ch["propagation"].get("forward", True))
         do_bwd = bool(ch["propagation"].get("backprop", True))
-        cap = ch["propagation"].get("cap")
-        try:
-            idx = order.index(str(node_name))
-        except ValueError:
-            idx = None
-        if idx is not None:
-            # forward diffusion
-            if do_fwd:
-                cur = effect
-                j = idx + 1
-                while j < len(order):
-                    # numeric decay only if numeric
-                    if isinstance(cur, (int, float)):
-                        cur = float(cur) * decay
-                        if cap is not None and isinstance(cap, (int, float)) and cur < float(cap):
-                            break
-                        ch["effects"][order[j]] = max(cur, ch["effects"].get(order[j], 0))
-                    else:
-                        ch["effects"][order[j]] = cur
-                    j += 1
-            # backward diffusion
-            if do_bwd:
-                cur = effect
-                j = idx - 1
-                while j >= 0:
-                    if isinstance(cur, (int, float)):
-                        cur = float(cur) * decay
-                        if cap is not None and isinstance(cap, (int, float)) and cur < float(cap):
-                            break
-                        ch["effects"][order[j]] = max(cur, ch["effects"].get(order[j], 0))
-                    else:
-                        ch["effects"][order[j]] = cur
-                    j -= 1
         self.log(f"[chain.touch] {chain_name}.{node_name} effect={effect} (decay={decay}, cap={cap}, fwd={do_fwd}, bwd={do_bwd})")
 
     def _exec_deploy(self, node: Tree, ctx: EvalContext):
@@ -737,7 +793,10 @@ class Runtime:
 
         # In a real production system, this would suspend execution or call a callback.
         # For now, we simulate with CLI input or env var auto-approve.
-        if os.getenv("FLOWLANG_AUTO_APPROVE"):
+        if self.dry_run:
+            self.log("[dry_run] Gate auto-approved for simulation")
+            approved = True
+        elif os.getenv("FLOWLANG_AUTO_APPROVE"):
             self.log("[gate] Auto-approved by env")
             approved = True
         else:
