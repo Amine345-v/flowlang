@@ -57,6 +57,14 @@ class ImpactKind(str, Enum):
     CONSTRAINT = "constraint"
     REQUIREMENT = "requirement"
 
+# ─── Contract: Formal Verification Constraint ───────────────────
+@dataclass
+class Contract:
+    """Formal predicate that must hold true for a CriticalFeature."""
+    description: str
+    condition: str  # Python expression: "value > 0"
+    enforcement: str = "hard" # hard (reject) or soft (warn)
+
 # ─── CriticalFeature: The Constitutional Lock ───────────────────
 if _HAS_PYDANTIC:
     class CriticalFeature(BaseModel, frozen=True):
@@ -73,6 +81,7 @@ if _HAS_PYDANTIC:
         confidence: float = Field(ge=0.0, le=1.0, default=1.0)
         impact: ImpactKind = ImpactKind.GUIDANCE
         origin_node: Optional[str] = None
+        contracts: List[Contract] = Field(default_factory=list)
 
         @field_validator("impact_zones", mode="before")
         @classmethod
@@ -115,6 +124,7 @@ else:
         confidence: float = 1.0
         impact: str = "guidance"
         origin_node: Optional[str] = None
+        contracts: List[Contract] = field(default_factory=list)
 
 # ─── Helper: Parse a dict into a CriticalFeature safely ─────────
 def parse_critical_feature(raw: dict, fallback_origin: Optional[str] = None) -> Optional[CriticalFeature]:
@@ -132,7 +142,14 @@ def parse_critical_feature(raw: dict, fallback_origin: Optional[str] = None) -> 
             "confidence": raw.get("confidence", 1.0),
             "impact": raw.get("impact", "guidance"),
             "origin_node": fallback_origin,
+            "contracts": raw.get("contracts", []),
         }
+        
+        # Handle contract parsing if they are dicts
+        raw_contracts = data["contracts"]
+        if raw_contracts and isinstance(raw_contracts, list) and len(raw_contracts) > 0 and isinstance(raw_contracts[0], dict):
+             data["contracts"] = [Contract(**c) for c in raw_contracts]
+
         if _HAS_PYDANTIC:
             return CriticalFeature.model_validate(data)
         else:

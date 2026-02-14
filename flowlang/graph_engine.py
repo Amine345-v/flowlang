@@ -161,4 +161,5 @@ class SystemTreeEngine:
     
     @property 
     def is_valid_dag(self) -> bool:
+        """Check if the graph is a Directed Acyclic Graph (DAG)."""
         return nx.is_directed_acyclic_graph(self.graph)
