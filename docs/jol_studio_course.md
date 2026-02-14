@@ -342,6 +342,95 @@ Halfway through coding, the **Developer** creates an API. Before committing, the
 
 ---
 
+## 🗺️ Module 10: From Alienation to Insight (The "Map" Metaphor)
+
+In current AI systems, massive outputs cause **Alienation (الاغتراب)**. Even experts struggle to review thousands of lines, leading them to either surrender to the model (blind trust) or drown in slow manual review. Jol Studio solves this by turning the Project Tree into a **Dynamic Map**.
+
+### 1. The Google Maps Effect (بصيرة الخريطة)
+Just as you don't need to memorize every street in a city to reach your destination, a Jol Studio user doesn't need to review every probabilistic output of the AI.
+
+*   **The Sea:** The chaotic depth of all possible engineering calculations.
+*   **The System Tree:** The "Google Maps" of your bridge. It shows "Why" a specific concrete thickness was chosen, linking it "genetically" to the soil analysis trace.
+*   **The Result:** You gain **Insight (بصيرة)**. You see the connections and branches clearly, removing the "alienation" from the final product.
+
+### 2. The Bridge Engineering Case
+Consider a bridge project divided into specialized teams (Materials, Structural, Surveyors):
+*   **The Materials Team:** Records "Concrete Strength" as a Critical Feature.
+*   **The Structural Team:** Does not "guess" the strength; they receive it as a **Commanding Trace**.
+*   **The Map:** The user can look at the tree and see the exact causal chain from Soil -> Material -> Structure.
+
+---
+
+## ⚖️ Module 11: The Judge & Certainty (يقين الحكم)
+
+In Jol Studio, judging is not a matter of "opinion" or "style"—it is a matter of **Verifying Task Execution**.
+
+### 1. Judging the Trace, Not the Text
+The Judge team doesn't evaluate how "beautifully" the AI explained its structural design. It evaluates:
+*   **Critical Feature Alignment:** Did the Engineer follow the Soil Trace `098-Safe`? 
+*   **Tree Integrity:** Is the "Piling Depth" recorded in the correct branch of the System Tree?
+
+### 2. From Probability to Certainty (من الظن إلى اليقين)
+By focusing on **Critical Features** (+1), the Judge reaches a verdict of **Certainty**.
+*   If a drift is detected, the **Causal Echo (صدى التعديل)** propagates through the chains. 
+*   **The Harmonic Result:** The system ensures the bridge remains a unified, safe structure because any change in one Trace echoes across all connected commands.
+
+---
+
+## 🏗️ Module 12: The Skeleton vs. The Body
+The final realization of building with Jol Studio is the distinction between the **Skeleton** and the **Body**.
+*   **The Model (Swimmer):** Focuses on the "Body" (the heavy work/execution).
+*   **The System (Current):** Focuses on the "Skeleton" (Memory, Links, Future Effects).
+
+This division allows the user to act as the **Architect of Direction** without needing to be an expert in every line of code.
+
+---
+
+## 🧬 Module 13: The CFP Protocol (المنخل)
+
+In Jol Studio, not every word from the AI is saved. We use the **Critical Feature Protocol (CFP)** as a "Sieve" (المنخل) to separate the genetic blueprint of the project from the transient noise.
+
+### 1. The Three Sieve Tests
+A piece of information only becomes a **Trace** if it passes these tests:
+
+*   **Causal Dependency (الاعتمادية السببية):** Does a future team need this to start? (e.g., Soil Type -> Foundation Design).
+*   **Sovereign Root (السيادة الدستورية):** Does it affect Budget, Safety, or Project Goals?
+*   **Echo Potential (صدى التعديل):** If we change this later, will it require re-calculating other parts?
+
+### 2. The Anatomy of a Feature
+When a feature is registered, it carries its own "Genetic History":
+*   `feature_id`: Unique signature.
+*   `ancestry_link`: Which previous trace gave birth to this one?
+*   `impact_zones`: Who else in the empire needs to know?
+*   `echo_signature`: How far will the ripple go if modified?
+
+### 3. The Result: A Lean Empire
+By using CFP, you don't end up with a "drowning" amount of documentation. You end up with a **Skeleton of Certainty** where every point is a lever that moves the project forward.
+
+---
+
+## 🏛️ Module 14: The Judge Engine (Certainty beyond Text)
+
+In Jol Studio, the "Judge" is the Maestro's legal architect. Unlike simple AI evaluation, the Judge Engine uses a **Triple-Check Protocol** to ensure that every step of the project is constitutionally sound.
+
+### 1. The Triple-Check Protocol
+Before a Judge grants "Certainty" (اليقين), they perform:
+*   **Ancestry Check (فحص النسب):** Does the feature's genetic ID link back to a valid parent? If an Engineer claims a design is based on a "Soil Report" that doesn't exist, the Judge detects the forgery.
+*   **Feasibility Check (فحص القيود):** Does the feature violate project laws (Budget, Safety, Time)?
+*   **Tree Completion (ملأ الشجرة):** Does this feature fill a mandatory gap in the System Tree? 
+
+### 2. The Structural Gap Report (SGR)
+When a Judge rejects a piece of work, they don't just say "No". They issue a **Structural Gap Report**. 
+This report is a **Refinement Command** that is injected into the next execution cycle as part of the "Current". 
+
+**Example of an SGR:**
+> "Tree Gap: Mandatory node 'piling_integrity' is missing. Causal Gap: Broken ancestry for Feature ENG-001."
+
+### 3. The Result: Institutional Integrity
+By enforcing these rules at the "Current" level, Jol Studio ensures that the AI cannot "drift" into alienation. The System Tree becomes a validated record of professional truth.
+
+---
+
 ## 🎓 Final Conclusion: The Goal of Jol Studio
 
 Jol Studio turns the AI from a lost swimmer in a drowning sea of context into a precise navigator on a high-speed current. 

@@ -6,7 +6,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         "lark",
-        "pydantic",
+        "pydantic>=2.0",
+        "networkx>=3.0",
+        "loguru>=0.7",
         "openai",
         "anthropic",
         "google-generativeai",

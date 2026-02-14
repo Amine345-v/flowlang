@@ -68,7 +68,7 @@ flow_stmt: checkpoint | if_stmt | while_stmt | for_stmt | par_stmt | race_stmt |
 
 checkpoint: "checkpoint" STRING ("(" "report" ":" expr_list ")")? "{" local_stmt* "}"
 
-local_stmt: var_assign ";" | action_stmt ";" | if_stmt | par_stmt | race_stmt | flow_control | context_stmt ";" | chain_touch_stmt ";" | system_call_stmt ";" | deploy_stmt ";" | confirm_stmt ";"
+local_stmt: var_assign ";" | action_stmt ";" | if_stmt | while_stmt | for_stmt | par_stmt | race_stmt | flow_control | context_stmt ";" | chain_touch_stmt ";" | system_call_stmt ";" | deploy_stmt ";" | confirm_stmt ";"
 
 if_stmt: "if" "(" expr ")" block ("else" block)?
 while_stmt: "while" "(" expr ")" block
@@ -87,7 +87,11 @@ system_call_stmt: IDENT "." IDENT "(" arg_list? ")"
 confirm_stmt: "confirm" "(" STRING ("," named_arg)* ")" "->" IDENT
 
 action_stmt: IDENT "." command_action
-command_action: "search" "(" arg_list? ")" | "try" "(" arg_list? ")" | "judge" "(" arg_list? ")" | "ask" "(" arg_list? ")"
+command_action: search_action | try_action | judge_action | ask_action
+search_action: "search" "(" arg_list? ")"
+try_action: "try" "(" arg_list? ")"
+judge_action: "judge" "(" arg_list? ")"
+ask_action: "ask" "(" arg_list? ")"
 
 arg_list: named_arg ("," named_arg)*
 named_arg: IDENT "=" expr | expr

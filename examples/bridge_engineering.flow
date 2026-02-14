@@ -1,0 +1,47 @@
+// bridge_engineering.flow
+// A high-complexity flow demonstrating the Certainty Loop (Yaqeen)
+
+process bridge_project "Suspension Bridge Alpha" {
+    root: "Infrastructure";
+    branch "Infrastructure" -> ["Site-Analysis", "Structural-Design", "Final-Audit"];
+}
+
+chain construction_line {
+    nodes: [Analysis, Design, Audit];
+    propagation: causal(decay=1.0, backprop=true);
+}
+
+team surveyor : Command<Search> [size=1, connector="node examples/bridge_researcher.js"];
+team architect : Command<Try>    [size=1, connector="node examples/bridge_engineer.js"];
+team evaluator : Command<Judge>  [size=1, connector="node examples/bridge_judge.js"];
+
+flow build_bridge(using: surveyor, architect, evaluator) {
+    
+    checkpoint "geology_research" (report: geo_report) {
+         geo_report = surveyor.search("Site-A");
+         bridge_project.mark("Site-Analysis", "Survey-Complete");
+         construction_line.touch("Analysis", 1.0);
+    }
+
+    checkpoint "structural_design" (report: d_spec) {
+         // Architect MUST follow the traces from geo_report
+         d_spec = architect.try("design_bridge", {"input": geo_report});
+         bridge_project.mark("Structural-Design", "Schematic-Ready");
+         construction_line.touch("Design", 1.0);
+    }
+
+    checkpoint "certainty_audit" (report: verdict) {
+         // Evaluator reaches Yaqeen by looking at traces
+         verdict = evaluator.judge(d_spec);
+         
+         if (verdict.pass) {
+             bridge_project.mark("Final-Audit", "Approved");
+             construction_line.touch("Audit", 1.0);
+             echo "Yaqeen (Certainty) Reached: Bridge Design Approved.";
+         } else {
+             bridge_project.mark("Final-Audit", "Drift-Detected");
+             echo "Drift Detected! Backtracking to research...";
+             flow.back_to("geology_research")
+         }
+    }
+}

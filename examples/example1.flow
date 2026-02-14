@@ -1,13 +1,3 @@
-    // Parallel demo (contexts will deep-merge)
-    par {
-      tmpA = DevSearchers.search("A");
-      tmpB = DevExperimenters.try("B");
-    }
-    // Race demo (first to finish will win and merge)
-    race {
-      fast = DevMonologue.ask("fast");
-      slow = DevJudges.judge("slow", "ok");
-    }
 // FlowLang Example v0.1
 
 // Declared result types
@@ -26,6 +16,9 @@ result SearchResult {
 result CommunicateResult {
   text: string;
 };
+
+resource CodeTool: Tool {}
+
 
 type Command<Search>;
 type Command<Try>;
@@ -65,9 +58,9 @@ process ProductTree "NLP Probabilistic Model" {
   branch "Understanding" -> ["Collect_Requirements", "User_Stories"];
   branch "Design" -> ["Model_Structure", "Data_Schema"];
   branch "Build" -> ["Implement", "Train", "Validate"];
-  node "Implement" { owner: "devA" };
-  node "Validate" { checks: ["bias", "stability"] };
-  policy: { risk: 0.2 };
+  node "Implement" { owner: "devA"; };
+  node "Validate" { checks: ["bias", "stability"]; };
+  policy: { risk: 0.2; };
   audit: enabled;
 }
 
@@ -77,6 +70,16 @@ flow BuildProbModel(using: DevSearchers, DevExperimenters, DevJudges, DevMonolog
   merge_policy: deep_merge;
 
   checkpoint "Understand" {
+    // Parallel demo (contexts will deep-merge)
+    par {
+      tmpA = DevSearchers.search("A");
+      tmpB = DevExperimenters.try("B");
+    }
+    // Race demo (first to finish will win and merge)
+    race {
+      fast = DevMonologue.ask("fast");
+      slow = DevJudges.judge("slow", "ok");
+    }
     report = DevMonologue.ask("ما المطلوب لغويًا واحتماليًا؟");
     S1 = DevSearchers.search("نماذج احتمالية ملائمة للغة الطبيعية");
     J1 = DevJudges.judge(S1, "ملاءمة");

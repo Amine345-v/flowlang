@@ -1,131 +1,146 @@
 """
 Unit tests for the FlowLang parser.
+Tests the parse() function and ParseError from flowlang.parser.
 """
 import pytest
+from pathlib import Path
 
-from flowlang.parser import Parser, ParseError
-from flowlang.ast import Flow, Checkpoint, TeamAction
+from flowlang.parser import parse, ParseError
 
 
-def test_parse_simple_flow(parser):
+def test_parse_simple_flow():
     """Test parsing a simple flow definition."""
     flow_src = """
-    flow simple_flow(dev_team) {
+    team dev_team : Command<Search> [size=1];
+    flow simple_flow(using: dev_team) {
         checkpoint "start" {
-            dev_team: write_code()
+            dev_team.search("query");
         }
     }
     """
     
-    flow = parser.parse(flow_src)
+    tree = parse(flow_src)
+    assert tree is not None
+    assert tree.data == "program"
     
-    assert isinstance(flow, Flow)
-    assert flow.name == "simple_flow"
-    assert "dev_team" in flow.parameters
-    assert len(flow.checkpoints) == 1
+    # Find flow declaration
+    flows = list(tree.find_data("flow_decl"))
+    assert len(flows) == 1
+    assert str(flows[0].children[0]) == "simple_flow"
     
-    checkpoint = flow.checkpoints[0]
-    assert checkpoint.name == "start"
-    assert len(checkpoint.actions) == 1
+    # Find checkpoints
+    checkpoints = list(tree.find_data("checkpoint"))
+    assert len(checkpoints) == 1
     
-    action = checkpoint.actions[0]
-    assert action.team == "dev_team"
-    assert action.command == "write_code"
-    assert not action.args
+    # Find actions
+    actions = list(tree.find_data("action_stmt"))
+    assert len(actions) == 1
+    assert str(actions[0].children[0]) == "dev_team"
 
 
-def test_parse_complex_flow(parser):
+def test_parse_complex_flow():
     """Test parsing a more complex flow with multiple checkpoints and actions."""
     flow_src = """
-    flow complex_flow(dev, qa, ops) {
+    team dev : Command<Search> [size=2];
+    team qa : Command<Judge> [size=1];
+    team ops : Command<Try> [size=1];
+    flow complex_flow(using: dev, qa, ops) {
         checkpoint "develop" {
-            dev: write_code()
-            dev: run_tests()
-            qa: review_code()
+            dev.search("requirements");
+            qa.judge("code_quality", "high");
         }
         
         checkpoint "deploy" {
-            ops: deploy(env="staging")
-            qa: test_in_staging()
+            ops.try("staging deployment");
+            qa.judge("staging_test", "pass");
         }
         
         checkpoint "release" {
-            ops: deploy(env="production")
-            ops: notify_team(message="Deployment complete")
+            ops.try("production deployment");
         }
     }
     """
     
-    flow = parser.parse(flow_src)
+    tree = parse(flow_src)
     
-    assert flow.name == "complex_flow"
-    assert set(flow.parameters) == {"dev", "qa", "ops"}
-    assert len(flow.checkpoints) == 3
+    flows = list(tree.find_data("flow_decl"))
+    assert len(flows) == 1
+    assert str(flows[0].children[0]) == "complex_flow"
     
-    # Check first checkpoint
-    cp1 = flow.checkpoints[0]
-    assert cp1.name == "develop"
-    assert len(cp1.actions) == 3
-    assert cp1.actions[0].command == "write_code"
-    assert cp1.actions[1].command == "run_tests"
-    assert cp1.actions[2].command == "review_code"
-    
-    # Check action with arguments
-    cp2 = flow.checkpoints[1]
-    assert cp2.actions[0].args == [("env", "staging")]
-    
-    # Check multiple arguments
-    cp3 = flow.checkpoints[2]
-    assert cp3.actions[1].args == [("message", "Deployment complete")]
+    checkpoints = list(tree.find_data("checkpoint"))
+    assert len(checkpoints) == 3
 
 
-def test_parse_errors(parser):
-    """Test parsing invalid flow definitions."""
-    # Missing flow name
+def test_parse_errors():
+    """Test parsing invalid flow definitions raises ParseError."""
+    # Missing flow closing brace
     with pytest.raises(ParseError):
-        parser.parse("flow {}")
+        parse("flow test_flow(using: T) {")
     
-    # Missing opening brace
+    # Invalid syntax
     with pytest.raises(ParseError):
-        parser.parse("flow test_flow }")
+        parse("this is not valid flowlang")
     
-    # Invalid team name
+    # Empty team with no type
     with pytest.raises(ParseError):
-        parser.parse("flow test_flow { checkpoint test { 123: test() } }")
+        parse("team ;")
 
 
-def test_parse_chain_definition(parser):
-    """Test parsing chain definitions."""
+def test_parse_chain_definition():
+    """Test parsing chain declarations."""
     src = """
     chain deployment_flow {
-        nodes = ["build", "test", "deploy"]
+        nodes: [build, test, deploy];
+        propagation: causal(decay=0.5, backprop=true, forward=true);
     }
     """
     
-    chain = parser.parse_chain(src)
-    assert chain.name == "deployment_flow"
-    assert chain.nodes == ["build", "test", "deploy"]
+    tree = parse(src)
+    chains = list(tree.find_data("chain_decl"))
+    assert len(chains) == 1
+    assert str(chains[0].children[0]) == "deployment_flow"
 
 
-def test_parse_process_definition(parser):
-    """Test parsing process definitions with policies."""
+def test_parse_process_definition():
+    """Test parsing process declarations with policies."""
     src = """
-    process deployment {
-        chain = "deployment_flow"
-        
-        policy {
-            require_reason = true
-            allowed_status = ["pending", "in_progress", "completed", "failed"]
-            max_children = 5
-            protected_nodes = ["deploy"]
-            audit_required = true
-        }
+    process deployment "Deploy Flow" {
+        root: "Root";
+        branch "Pipeline" -> ["Build", "Test", "Deploy"];
+        node "Build" { type: "ci"; };
+        policy: { require_reason: true; };
+        audit: enabled;
     }
     """
     
-    process = parser.parse_process(src)
-    assert process.name == "deployment"
-    assert process.chain_name == "deployment_flow"
-    assert process.policy.require_reason is True
-    assert "deploy" in process.policy.protected_nodes
-    assert process.policy.max_children == 5
+    tree = parse(src)
+    processes = list(tree.find_data("process_decl"))
+    assert len(processes) == 1
+    assert str(processes[0].children[0]) == "deployment"
+
+
+def test_parse_result_type():
+    """Test parsing result type declarations."""
+    src = """
+    result SearchResult {
+        items: list;
+        total: number;
+    };
+    """
+    
+    tree = parse(src)
+    results = list(tree.find_data("result_decl"))
+    assert len(results) == 1
+    assert str(results[0].children[0]) == "SearchResult"
+
+
+def test_parse_team_with_options():
+    """Test parsing team declarations with various options."""
+    src = """
+    team searchers : Command<Search> [size=3, distribution=round_robin];
+    """
+    
+    tree = parse(src)
+    teams = list(tree.find_data("team_decl"))
+    assert len(teams) == 1
+    assert str(teams[0].children[0]) == "searchers"

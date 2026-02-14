@@ -52,6 +52,8 @@ class SemanticAnalyzer:
                     kind = CommandKind(str(ch))
             if name is None or kind is None:
                 raise SemanticError("Malformed team declaration (missing name or COMMAND_KIND)")
+            if name in self.teams:
+                raise SemanticError(f"Duplicate team declaration: '{name}'")
             self.teams[name] = TeamInfo(name, kind)
 
         for node in self.tree.find_data("chain_decl"):
@@ -75,11 +77,8 @@ class SemanticAnalyzer:
         any_result = False
         for res in self.tree.find_data("result_decl"):
             any_result = True
-            rname = None
+            rname = str(res.children[0])  # result IDENT
             fields: Set[str] = set()
-            for ch in res.children:
-                if isinstance(ch, Token) and ch.type == "IDENT" and rname is None:
-                    rname = str(ch)
             for fld in res.find_data("result_field"):
                 fname = str(fld.children[0])
                 fields.add(fname)
@@ -94,12 +93,22 @@ class SemanticAnalyzer:
                 "CommunicateResult": {"text"},
             }
 
-        # collect process names
+        # collect process and resource names
+        self.resources: Set[str] = set()
+        
         for node in self.tree.find_data("process_decl"):
             # process IDENT STRING { ... }
             for ch in node.children:
                 if isinstance(ch, Token) and ch.type == "IDENT":
                     self.processes.add(str(ch))
+                    break
+        
+        for node in self.tree.find_data("resource_decl"):
+            # resource IDENT : TYPE { ... }
+            # find first IDENT token
+            for ch in node.children:
+                if isinstance(ch, Token) and ch.type == "IDENT":
+                    self.resources.add(str(ch))
                     break
 
         for node in self.tree.find_data("flow_decl"):
@@ -148,8 +157,19 @@ class SemanticAnalyzer:
                 team_info = self.teams[team_ident]
                 cmd_node = act.children[1]
                 if isinstance(cmd_node, Tree) and cmd_node.data == "command_action":
-                    verb_tok = cmd_node.children[0]  # Token for verb
-                    verb = str(verb_tok)
+                    # The verb is determined by the named sub-rule:
+                    # search_action, try_action, judge_action, ask_action
+                    verb_rule = cmd_node.children[0]  # The sub-rule tree
+                    if isinstance(verb_rule, Tree):
+                        verb_map = {
+                            "search_action": "search",
+                            "try_action": "try",
+                            "judge_action": "judge",
+                            "ask_action": "ask",
+                        }
+                        verb = verb_map.get(verb_rule.data, str(verb_rule.data))
+                    else:
+                        verb = str(verb_rule)
                     self._check_team_action(team_info, verb, flow_name)
 
             # type inference for assignments: infer expression types and record
@@ -197,17 +217,18 @@ class SemanticAnalyzer:
                 chain_name = str(touch.children[0])
                 if chain_name not in self.chains:
                     raise SemanticError(f"Unknown chain '{chain_name}' in flow '{flow_name}'")
-                node_name = touch.children[1].value  # STRING
+                node_name_raw = touch.children[1].value  # STRING
+                node_name = node_name_raw.strip('"')     # Strip quotes
                 if node_name not in self.chains[chain_name].nodes:
                     raise SemanticError(
                         f"Chain '{chain_name}' has no node '{node_name}' (known: {sorted(self.chains[chain_name].nodes)})")
 
-            # system_call_stmt target validation (must be known chain or process)
+            # system_call_stmt target validation (must be known chain or process or resource)
             for call in flow_node.find_data("system_call_stmt"):
                 target = str(call.children[0])
-                if target not in self.chains and target not in self.processes:
+                if target not in self.chains and target not in self.processes and target not in self.resources:
                     raise SemanticError(
-                        f"Unknown system target '{target}' in flow '{flow_name}' (expected chain or process name)")
+                        f"Unknown system target '{target}' in flow '{flow_name}' (expected chain, process, or resource name)")
 
             # audit_stmt must target a known process
             for aud in flow_node.find_data("audit_stmt"):
@@ -266,7 +287,7 @@ class SemanticAnalyzer:
         # walk down expression kinds
         if isinstance(expr, Tree):
             dt = expr.data
-            if dt in ("expr", "or_expr", "and_expr", "cmp_expr", "add_expr", "mul_expr", "unary_expr"):
+            if dt in ("expr", "or_expr", "and_expr", "cmp_expr", "add_expr", "mul_expr"):
                 # binary chains: infer lhs then validate pairs
                 if len(expr.children) == 1:
                     return self._infer_expr_type(expr.children[0])
@@ -275,6 +296,9 @@ class SemanticAnalyzer:
                 i = 1
                 while i < len(expr.children):
                     op_tok = expr.children[i]
+                    # Ensure we have an operand following the operator
+                    if i + 1 >= len(expr.children):
+                        break
                     rhs_type = self._infer_expr_type(expr.children[i+1])
                     op = str(op_tok) if isinstance(op_tok, Token) else None
                     self._validate_binop_types(dt, op, lhs, rhs_type)
@@ -288,6 +312,19 @@ class SemanticAnalyzer:
                     else:
                         lhs = lhs or rhs_type
                     i += 2
+                return lhs
+            
+            if dt == "unary":
+                # ("!"|"-") unary_expr -> unary
+                # children: [op, operand]
+                if len(expr.children) == 2:
+                    operand_type = self._infer_expr_type(expr.children[1])
+                    op = str(expr.children[0])
+                    if op == "!":
+                        return "boolean"
+                    return operand_type
+                elif len(expr.children) == 1:
+                    return self._infer_expr_type(expr.children[0])
                 return lhs
             if dt == "number":
                 return "number"

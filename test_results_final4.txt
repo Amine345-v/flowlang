@@ -1,0 +1,272 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\asusu\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\asusu\CascadeProjects\flowlang\flowlang
+configfile: pytest.ini
+plugins: anyio-4.12.1
+collecting ... collected 63 items
+
+tests/benchmark_test.py::TestPerformance::test_parsing_performance PASSED [  1%]
+tests/benchmark_test.py::TestPerformance::test_runtime_load_performance PASSED [  3%]
+tests/benchmark_test.py::TestPerformance::test_dry_run_execution_performance PASSED [  4%]
+tests/benchmark_test.py::TestPerformance::test_deep_merge_performance PASSED [  6%]
+tests/test_concept_alignment.py::test_strict_team_typing PASSED          [  7%]
+tests/test_concept_alignment.py::test_order_batch_processing PASSED      [  9%]
+tests/test_concept_alignment.py::test_checkpoint_report_handover PASSED  [ 11%]
+tests/test_concept_alignment.py::test_orders_promotion PASSED            [ 12%]
+tests/test_grammar.py::test_parse_example_file FAILED                    [ 14%]
+tests/test_grammar.py::test_parse_min_program PASSED                     [ 15%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_approved PASSED  [ 17%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_rejected PASSED  [ 19%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_auto_approve PASSED [ 20%]
+tests/test_human_gates.py::TestHumanGates::test_dry_run_action_skipped PASSED [ 22%]
+tests/test_parser.py::test_parse_simple_flow PASSED                      [ 23%]
+tests/test_parser.py::test_parse_complex_flow PASSED                     [ 25%]
+tests/test_parser.py::test_parse_errors PASSED                           [ 26%]
+tests/test_parser.py::test_parse_chain_definition PASSED                 [ 28%]
+tests/test_parser.py::test_parse_process_definition PASSED               [ 30%]
+tests/test_parser.py::test_parse_result_type PASSED                      [ 31%]
+tests/test_parser.py::test_parse_team_with_options PASSED                [ 33%]
+tests/test_persistence.py::TestPersistence::test_manager_save_load PASSED [ 34%]
+tests/test_persistence.py::TestPersistence::test_runtime_auto_save PASSED [ 36%]
+tests/test_persistence.py::TestPersistence::test_resume_logic PASSED     [ 38%]
+tests/test_robustness.py::TestStateGrowth::test_deep_merge_list_growth PASSED [ 39%]
+tests/test_robustness.py::TestStateGrowth::test_deep_merge_nested_growth PASSED [ 41%]
+tests/test_robustness.py::TestStateGrowth::test_repeated_merge_state_size PASSED [ 42%]
+tests/test_robustness.py::TestCRDTMerge::test_crdt_numeric_max PASSED    [ 44%]
+tests/test_robustness.py::TestCRDTMerge::test_crdt_list_union PASSED     [ 46%]
+tests/test_robustness.py::TestMalformedAIResponse::test_garbage_json_fallback PASSED [ 47%]
+tests/test_robustness.py::TestMalformedAIResponse::test_missing_required_field PASSED [ 49%]
+tests/test_robustness.py::TestMalformedAIResponse::test_wrong_type_in_response PASSED [ 50%]
+tests/test_robustness.py::TestChainPropagation::test_propagation_decay_to_zero PASSED [ 52%]
+tests/test_robustness.py::TestProcessTreePolicies::test_protected_node_collapse_blocked PASSED [ 53%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_valid_judge_response PASSED [ 55%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_string_numbers_coerced PASSED [ 57%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_score_out_of_range_fails PASSED [ 58%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_invalid_string_fails PASSED [ 60%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_valid_search_response PASSED [ 61%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_single_string_coerced_to_list PASSED [ 63%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_none_becomes_empty_list PASSED [ 65%]
+tests/test_schema_validation.py::TestTryResultValidation::test_valid_try_response PASSED [ 66%]
+tests/test_schema_validation.py::TestTryResultValidation::test_missing_metrics_defaults PASSED [ 68%]
+tests/test_schema_validation.py::TestCommunicateResultValidation::test_valid_ask_response PASSED [ 69%]
+tests/test_schema_validation.py::TestCommunicateResultValidation::test_missing_history_defaults PASSED [ 71%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_valid_judge_creates_typed_value PASSED [ 73%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_invalid_judge_raises_error PASSED [ 74%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_raw_content_judge_fails PASSED [ 76%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_raw_content_ask_succeeds PASSED [ 77%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_search_with_valid_data PASSED [ 79%]
+tests/test_security.py::test_large_input_parsing PASSED                  [ 80%]
+tests/test_security.py::test_malformed_input_rejected PASSED             [ 82%]
+tests/test_security.py::test_dry_run_no_side_effects PASSED              [ 84%]
+tests/test_security.py::test_persistence_temp_directory PASSED           [ 85%]
+tests/test_security.py::test_input_escaping PASSED                       [ 87%]
+tests/test_security.py::test_concurrent_flow_isolation PASSED            [ 88%]
+tests/test_semantic.py::test_team_declaration_validation PASSED          [ 90%]
+tests/test_semantic.py::test_duplicate_team_declaration PASSED           [ 92%]
+tests/test_semantic.py::test_undefined_team_reference PASSED             [ 93%]
+tests/test_semantic.py::test_strict_typing_mismatch PASSED               [ 95%]
+tests/test_semantic.py::test_all_verb_types_valid PASSED                 [ 96%]
+tests/test_semantic.py::test_semantic_ok_example FAILED                  [ 98%]
+tests/test_semantic.py::test_semantic_field_error PASSED                 [100%]
+
+================================== FAILURES ===================================
+___________________________ test_parse_example_file ___________________________
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:689: in lex
+    yield lexer.next_token(lexer_state, parser_state)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:622: in next_token
+    raise UnexpectedCharacters(lex_state.text.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+E   lark.exceptions.UnexpectedCharacters: No terminal matches ';' in the current parser context, at line 20 col 27
+E   
+E   resource CodeTool: Tool {};
+E                             ^
+E   Expected one of: 
+E   	* CHAIN
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* TEAM
+E   	* FLOW
+E   	* RESOURCE
+E   	* TYPE
+E   
+E   Previous tokens: Token('RBRACE', '}')
+
+During handling of the above exception, another exception occurred:
+flowlang\parser.py:20: in parse
+    return parser.parse(text)
+           ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lark.py:677: in parse
+    return self.parser.parse(text, start=start, on_error=on_error)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parser_frontends.py:131: in parse
+    return self.parser.parse(stream, chosen_start, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:42: in parse
+    return self.parser.parse(lexer, start)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:88: in parse
+    return self.parse_from_state(parser_state)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:111: in parse_from_state
+    raise e
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:100: in parse_from_state
+    for token in state.lexer.lex(state):
+                 ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:698: in lex
+    raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
+E   lark.exceptions.UnexpectedToken: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+E   Expected one of: 
+E   	* CHAIN
+E   	* TYPE
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* FLOW
+E   	* $END
+E   	* RESOURCE
+E   	* TEAM
+E   Previous tokens: [Token('RBRACE', '}')]
+
+The above exception was the direct cause of the following exception:
+tests\test_grammar.py:9: in test_parse_example_file
+    tree = parse(p)
+           ^^^^^^^^
+flowlang\parser.py:22: in parse
+    raise ParseError(str(e)) from e
+E   flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+E   Expected one of: 
+E   	* CHAIN
+E   	* TYPE
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* FLOW
+E   	* $END
+E   	* RESOURCE
+E   	* TEAM
+E   Previous tokens: [Token('RBRACE', '}')]
+__________________________ test_semantic_ok_example ___________________________
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:689: in lex
+    yield lexer.next_token(lexer_state, parser_state)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:622: in next_token
+    raise UnexpectedCharacters(lex_state.text.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+E   lark.exceptions.UnexpectedCharacters: No terminal matches ';' in the current parser context, at line 20 col 27
+E   
+E   resource CodeTool: Tool {};
+E                             ^
+E   Expected one of: 
+E   	* CHAIN
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* TEAM
+E   	* FLOW
+E   	* RESOURCE
+E   	* TYPE
+E   
+E   Previous tokens: Token('RBRACE', '}')
+
+During handling of the above exception, another exception occurred:
+flowlang\parser.py:20: in parse
+    return parser.parse(text)
+           ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lark.py:677: in parse
+    return self.parser.parse(text, start=start, on_error=on_error)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parser_frontends.py:131: in parse
+    return self.parser.parse(stream, chosen_start, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:42: in parse
+    return self.parser.parse(lexer, start)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:88: in parse
+    return self.parse_from_state(parser_state)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:111: in parse_from_state
+    raise e
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:100: in parse_from_state
+    for token in state.lexer.lex(state):
+                 ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:698: in lex
+    raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
+E   lark.exceptions.UnexpectedToken: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+E   Expected one of: 
+E   	* CHAIN
+E   	* TYPE
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* FLOW
+E   	* $END
+E   	* RESOURCE
+E   	* TEAM
+E   Previous tokens: [Token('RBRACE', '}')]
+
+The above exception was the direct cause of the following exception:
+tests\test_semantic.py:111: in test_semantic_ok_example
+    tree = parse(p)
+           ^^^^^^^^
+flowlang\parser.py:22: in parse
+    raise ParseError(str(e)) from e
+E   flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+E   Expected one of: 
+E   	* CHAIN
+E   	* TYPE
+E   	* ROLE
+E   	* POLICY
+E   	* RESULT
+E   	* PROCESS
+E   	* FLOW
+E   	* $END
+E   	* RESOURCE
+E   	* TEAM
+E   Previous tokens: [Token('RBRACE', '}')]
+============================== warnings summary ===============================
+flowlang\ai_providers.py:23
+  C:\Users\asusu\CascadeProjects\flowlang\flowlang\flowlang\ai_providers.py:23: FutureWarning: 
+  
+  All support for the `google.generativeai` package has ended. It will no longer be receiving 
+  updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+  See README for more details:
+  
+  https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+  
+    import google.generativeai as genai  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_grammar.py::test_parse_example_file - flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+Expected one of: 
+	* CHAIN
+	* TYPE
+	* ROLE
+	* POLICY
+	* RESULT
+	* PROCESS
+	* FLOW
+	* $END
+	* RESOURCE
+	* TEAM
+Previous tokens: [Token('RBRACE', '}')]
+FAILED tests/test_semantic.py::test_semantic_ok_example - flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 20, column 27.
+Expected one of: 
+	* CHAIN
+	* TYPE
+	* ROLE
+	* POLICY
+	* RESULT
+	* PROCESS
+	* FLOW
+	* $END
+	* RESOURCE
+	* TEAM
+Previous tokens: [Token('RBRACE', '}')]
+=================== 2 failed, 61 passed, 1 warning in 2.49s ===================

@@ -1,200 +1,112 @@
 """
 Semantic analysis tests for FlowLang.
+Tests the SemanticAnalyzer using the actual parse() function.
 """
 import pytest
 from pathlib import Path
 
-from flowlang.parser import Parser
-from flowlang.semantic import SemanticAnalyzer, SemanticError
-from flowlang.ast import CommandKind
+from flowlang.parser import parse
+from flowlang.semantic import SemanticAnalyzer
+from flowlang.errors import SemanticError
 
 
 def test_team_declaration_validation():
     """Test validation of team declarations."""
     src = """
-    type Command<Dev, Test>;
-    
-    team devs: Command<Dev>;
-    team testers: Command<Test>;
+    team devs : Command<Search> [size=2];
+    team testers : Command<Judge> [size=1];
+    flow F(using: devs, testers) {
+        checkpoint "start" {
+            devs.search("query");
+            testers.judge("code", "quality");
+        }
+    }
     """
     
-    parser = Parser()
-    tree = parser.parse(src)
-    analyzer = SemanticAnalyzer()
-    analyzer.analyze(tree)
+    tree = parse(src)
+    analyzer = SemanticAnalyzer(tree)
+    analyzer.analyze()
     
     # Check teams were registered
     assert "devs" in analyzer.teams
-    assert analyzer.teams["devs"].kind == CommandKind("Dev")
     assert "testers" in analyzer.teams
-    assert analyzer.teams["testers"].kind == CommandKind("Test")
 
 
 def test_duplicate_team_declaration():
     """Test that duplicate team declarations are caught."""
     src = """
-    type Command<Dev>;
-    
-    team devs: Command<Dev>;
-    team devs: Command<Dev>;  # Duplicate
+    team devs : Command<Search> [size=1];
+    team devs : Command<Search> [size=2];
     """
     
-    parser = Parser()
-    tree = parser.parse(src)
-    analyzer = SemanticAnalyzer()
+    tree = parse(src)
+    analyzer = SemanticAnalyzer(tree)
     
-    with pytest.raises(SemanticError, match="Duplicate team declaration: 'devs'"):
-        analyzer.analyze(tree)
+    with pytest.raises(SemanticError, match="Duplicate team"):
+        analyzer.analyze()
 
 
 def test_undefined_team_reference():
     """Test that references to undefined teams are caught."""
     src = """
-    type Command<Dev>;
-    
-    flow test_flow(dev_team, non_existent_team) {
+    team devs : Command<Search> [size=1];
+    flow test_flow(using: devs) {
         checkpoint "start" {
-            dev_team: do_something()
-            non_existent_team: do_another_thing()
+            nonexistent.search("query");
         }
     }
     """
     
-    parser = Parser()
-    tree = parser.parse(src)
-    analyzer = SemanticAnalyzer()
+    tree = parse(src)
+    analyzer = SemanticAnalyzer(tree)
     
-    with pytest.raises(SemanticError, match="Undefined team: 'non_existent_team'"):
-        analyzer.analyze(tree)
+    with pytest.raises(SemanticError, match="Unknown team"):
+        analyzer.analyze()
 
 
-def test_chain_validation():
-    """Test validation of chain declarations."""
+def test_strict_typing_mismatch():
+    """Test that team type mismatches are caught."""
     src = """
-    chain deployment {
-        nodes = ["build", "test", "deploy"]
+    team devs : Command<Search> [size=1];
+    flow test_flow(using: devs) {
+        checkpoint "start" {
+            devs.judge("code", "quality");
+        }
     }
     """
     
-    parser = Parser()
-    tree = parser.parse_chain(src)
-    analyzer = SemanticAnalyzer()
-    analyzer.analyze_chain(tree)
+    tree = parse(src)
+    analyzer = SemanticAnalyzer(tree)
     
-    assert "deployment" in analyzer.chains
-    assert analyzer.chains["deployment"].nodes == {"build", "test", "deploy"}
+    with pytest.raises(SemanticError, match="cannot perform"):
+        analyzer.analyze()
 
 
-def test_process_validation():
-    """Test validation of process declarations."""
+def test_all_verb_types_valid():
+    """Test that all valid verb-type combinations pass analysis."""
     src = """
-    type Command<Dev>;
-    
-    team devs: Command<Dev>;
-    
-    chain deployment_flow {
-        nodes = ["build", "test"]
-    }
-    
-    process deployment {
-        chain = "deployment_flow"
-        
-        policy {
-            require_reason = true
-            allowed_status = ["pending", "in_progress"]
+    team s : Command<Search> [size=1];
+    team t : Command<Try> [size=1];
+    team j : Command<Judge> [size=1];
+    team c : Command<Communicate> [size=1];
+    flow test_flow(using: s, t, j, c) {
+        checkpoint "test" {
+            s.search("query");
+            t.try("experiment");
+            j.judge("data", "criteria");
+            c.ask("question");
         }
     }
     """
     
-    parser = Parser()
-    
-    # Parse and analyze chain first
-    chain_src = """
-    chain deployment_flow {
-        nodes = ["build", "test"]
-    }
-    """
-    chain_tree = parser.parse_chain(chain_src)
-    analyzer = SemanticAnalyzer()
-    analyzer.analyze_chain(chain_tree)
-    
-    # Then parse and analyze the process
-    process_src = """
-    process deployment {
-        chain = "deployment_flow"
-        
-        policy {
-            require_reason = true
-            allowed_status = ["pending", "in_progress"]
-        }
-    }
-    """
-    process_tree = parser.parse_process(process_src)
-    analyzer.analyze_process(process_tree)
-    
-    assert "deployment" in analyzer.processes
-    assert analyzer.processes["deployment"].chain_name == "deployment_flow"
-
-
-def test_flow_validation():
-    """Test validation of flow declarations."""
-    src = """
-    type Command<Dev, Test>;
-    
-    team devs: Command<Dev>;
-    team testers: Command<Test>;
-    
-    flow test_flow(dev_team, test_team) {
-        checkpoint "develop" {
-            dev_team: write_code()
-            test_team: review_code()
-        }
-        
-        checkpoint "deploy" {
-            dev_team: deploy()
-            test_team: test()
-        }
-    }
-    """
-    
-    parser = Parser()
-    tree = parser.parse(src)
-    analyzer = SemanticAnalyzer()
-    
-    # Register teams first
-    team_src = """
-    type Command<Dev, Test>;
-    
-    team devs: Command<Dev>;
-    team testers: Command<Test>;
-    """
-    team_tree = parser.parse(team_src)
-    analyzer.analyze(team_tree)
-    
-    # Then analyze the flow
-    analyzer.analyze_flow(tree)
-    
-    assert "test_flow" in analyzer.flows
-    assert len(analyzer.flows["test_flow"].checkpoints) == 2
-
-
-def test_undefined_chain_reference():
-    """Test that references to undefined chains are caught."""
-    src = """
-    process deployment {
-        chain = "non_existent_chain"
-    }
-    """
-    
-    parser = Parser()
-    tree = parser.parse_process(src)
-    analyzer = SemanticAnalyzer()
-    
-    with pytest.raises(SemanticError, match="Undefined chain: 'non_existent_chain'"):
-        analyzer.analyze_process(tree)
+    tree = parse(src)
+    analyzer = SemanticAnalyzer(tree)
+    # Should not raise
+    analyzer.analyze()
 
 
 def test_semantic_ok_example():
+    """Test that example1.flow passes semantic analysis."""
     p = Path(__file__).resolve().parents[1] / "examples" / "example1.flow"
     tree = parse(p)
     # should not raise
@@ -202,7 +114,7 @@ def test_semantic_ok_example():
 
 
 def test_semantic_field_error():
-    # wrong field on JudgeResult
+    """Test that accessing non-existent fields on result types raises error."""
     src = (
         'result JudgeResult { confidence: number; score: number; pass: boolean; };\n'
         'type Command<Judge>;\n'

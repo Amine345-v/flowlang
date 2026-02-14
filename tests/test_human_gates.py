@@ -58,17 +58,15 @@ class TestHumanGates:
         rt = Runtime(dry_run=True)
         ctx = EvalContext(variables={}, checkpoints=[])
         
-        # action: Team.Do(args)
-        # Tree structure for _exec_action:
-        # children: [Team, ActionTree]
-        # ActionTree children: [Verb, ArgList]
-        
-        action_node = Tree("command_action", [Token("IDENT", "ask"), Tree("arg_list", [])])
+        # New grammar structure: action_stmt -> [IDENT, command_action -> [ask_action -> [arg_list?]]]
+        ask_node = Tree("ask_action", [Tree("arg_list", [])])
+        action_node = Tree("command_action", [ask_node])
         node = Tree("action_stmt", [Token("IDENT", "TeamA"), action_node])
         
         rt._exec_action(node, ctx)
         
-        # Result should be Unknown/dry_run
+        # In dry_run mode, result is an Order object
         res = ctx.variables.get("_")
-        assert res.tag.name == "Unknown"
-        assert res.meta["text"] == "dry_run"
+        from flowlang.types import Order
+        assert isinstance(res, Order)
+        assert any("[dry_run]" in str(l) for l in rt.console)

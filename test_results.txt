@@ -1,0 +1,1361 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\asusu\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\asusu\CascadeProjects\flowlang\flowlang
+configfile: pytest.ini
+plugins: anyio-4.12.1
+collecting ... collected 39 items
+
+tests/test_grammar.py::test_parse_example_file FAILED                    [  2%]
+tests/test_grammar.py::test_parse_min_program FAILED                     [  5%]
+tests/test_concept_alignment.py::test_strict_team_typing FAILED          [  7%]
+tests/test_concept_alignment.py::test_order_batch_processing FAILED      [ 10%]
+tests/test_concept_alignment.py::test_checkpoint_report_handover FAILED  [ 12%]
+tests/test_concept_alignment.py::test_orders_promotion FAILED            [ 15%]
+tests/test_robustness.py::TestStateGrowth::test_deep_merge_list_growth PASSED [ 17%]
+tests/test_robustness.py::TestStateGrowth::test_deep_merge_nested_growth PASSED [ 20%]
+tests/test_robustness.py::TestStateGrowth::test_repeated_merge_state_size PASSED [ 23%]
+tests/test_robustness.py::TestCRDTMerge::test_crdt_numeric_max PASSED    [ 25%]
+tests/test_robustness.py::TestCRDTMerge::test_crdt_list_union PASSED     [ 28%]
+tests/test_robustness.py::TestMalformedAIResponse::test_garbage_json_fallback PASSED [ 30%]
+tests/test_robustness.py::TestMalformedAIResponse::test_missing_required_field FAILED [ 33%]
+tests/test_robustness.py::TestMalformedAIResponse::test_wrong_type_in_response FAILED [ 35%]
+tests/test_robustness.py::TestChainPropagation::test_propagation_decay_to_zero PASSED [ 38%]
+tests/test_robustness.py::TestProcessTreePolicies::test_protected_node_collapse_blocked FAILED [ 41%]
+tests/test_persistence.py::TestPersistence::test_manager_save_load PASSED [ 43%]
+tests/test_persistence.py::TestPersistence::test_runtime_auto_save PASSED [ 46%]
+tests/test_persistence.py::TestPersistence::test_resume_logic PASSED     [ 48%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_approved PASSED  [ 51%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_rejected PASSED  [ 53%]
+tests/test_human_gates.py::TestHumanGates::test_confirm_auto_approve PASSED [ 56%]
+tests/test_human_gates.py::TestHumanGates::test_dry_run_action_skipped FAILED [ 58%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_valid_judge_response PASSED [ 61%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_string_numbers_coerced PASSED [ 64%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_score_out_of_range_fails PASSED [ 66%]
+tests/test_schema_validation.py::TestJudgeResultValidation::test_invalid_string_fails PASSED [ 69%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_valid_search_response PASSED [ 71%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_single_string_coerced_to_list PASSED [ 74%]
+tests/test_schema_validation.py::TestSearchResultValidation::test_none_becomes_empty_list PASSED [ 76%]
+tests/test_schema_validation.py::TestTryResultValidation::test_valid_try_response PASSED [ 79%]
+tests/test_schema_validation.py::TestTryResultValidation::test_missing_metrics_defaults PASSED [ 82%]
+tests/test_schema_validation.py::TestCommunicateResultValidation::test_valid_ask_response PASSED [ 84%]
+tests/test_schema_validation.py::TestCommunicateResultValidation::test_missing_history_defaults PASSED [ 87%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_valid_judge_creates_typed_value PASSED [ 89%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_invalid_judge_raises_error PASSED [ 92%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_raw_content_judge_fails PASSED [ 94%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_raw_content_ask_succeeds PASSED [ 97%]
+tests/test_schema_validation.py::TestMapToTypedValue::test_search_with_valid_data PASSED [100%]
+
+================================== FAILURES ===================================
+___________________________ test_parse_example_file ___________________________
+
+self = <lark.lexer.ContextualLexer object at 0x0000026FEE5E2BA0>
+lexer_state = <lark.lexer.LexerState object at 0x0000026FEE60CF40>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE60CF00>
+
+    def lex(self, lexer_state: LexerState, parser_state: 'ParserState') -> Iterator[Token]:
+        try:
+            while True:
+                lexer = self.lexers[parser_state.position]
+>               yield lexer.next_token(lexer_state, parser_state)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:689: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.lexer.BasicLexer object at 0x0000026FEE65A8F0>
+lex_state = <lark.lexer.LexerState object at 0x0000026FEE60CF40>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE60CF00>
+
+    def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
+        line_ctr = lex_state.line_ctr
+        while line_ctr.char_pos < lex_state.text.end:
+            res = self.match(lex_state.text, line_ctr.char_pos)
+            if not res:
+                allowed = self.scanner.allowed_types - self.ignore_types
+                if not allowed:
+                    allowed = {"<END-OF-FILE>"}
+>               raise UnexpectedCharacters(lex_state.text.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
+                                           state=parser_state, terminals_by_name=self.terminals_by_name)
+E               lark.exceptions.UnexpectedCharacters: No terminal matches 'p' in the current parser context, at line 2 col 5
+E               
+E                   par {
+E                   ^
+E               Expected one of: 
+E               	* POLICY
+E               	* TEAM
+E               	* ROLE
+E               	* PROCESS
+E               	* RESOURCE
+E               	* TYPE
+E               	* CHAIN
+E               	* FLOW
+E               	* RESULT
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:622: UnexpectedCharacters
+
+During handling of the above exception, another exception occurred:
+
+source = WindowsPath('C:/Users/asusu/CascadeProjects/flowlang/flowlang/examples/example1.flow')
+
+    def parse(source: str | Path) -> Tree:
+        try:
+            text = Path(source).read_text(encoding="utf-8") if isinstance(source, Path) or (isinstance(source, str) and Path(source).exists()) else str(source)
+            parser = _load_parser()
+>           return parser.parse(text)
+                   ^^^^^^^^^^^^^^^^^^
+
+flowlang\parser.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Lark(open('<string>'), parser='lalr', lexer='contextual', ...)
+text = '    // Parallel demo (contexts will deep-merge)\n    par {\n      tmpA = DevSearchers.search("A");\n      tmpB = DevE...ress");\n    ProductTree.expand("Design", ["HyperParam_Tuning", "Schema_Review"]);\n    ProductTree.audit();\n  }\n}\n'
+start = None, on_error = None
+
+    def parse(self, text: LarkInput, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+        """Parse the given text, according to the options provided.
+    
+        Parameters:
+            text (LarkInput): Text to be parsed, as `str` or `bytes`.
+                TextSlice may also be used, but only when lexer='basic' or 'contextual'.
+                If Lark was created with a custom lexer, this may be an object of any type.
+            start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
+            on_error (function, optional): if provided, will be called on UnexpectedInput error,
+                with the exception as its argument. Return true to resume parsing, or false to raise the exception.
+                LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
+    
+        Returns:
+            If a transformer is supplied to ``__init__``, returns whatever is the
+            result of the transformation. Otherwise, returns a Tree instance.
+    
+        :raises UnexpectedInput: On a parse error, one of these sub-exceptions will rise:
+                ``UnexpectedCharacters``, ``UnexpectedToken``, or ``UnexpectedEOF``.
+                For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
+    
+        """
+        if on_error is not None and self.options.parser != 'lalr':
+            raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
+>       return self.parser.parse(text, start=start, on_error=on_error)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lark.py:677: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parser_frontends.ParsingFrontend object at 0x0000026FEE5AFED0>
+text = '    // Parallel demo (contexts will deep-merge)\n    par {\n      tmpA = DevSearchers.search("A");\n      tmpB = DevE...ress");\n    ProductTree.expand("Design", ["HyperParam_Tuning", "Schema_Review"]);\n    ProductTree.audit();\n  }\n}\n'
+start = None, on_error = None
+
+    def parse(self, text: Optional[LarkInput], start=None, on_error=None):
+        if self.lexer_conf.lexer_type in ("dynamic", "dynamic_complete"):
+            if isinstance(text, TextSlice) and not text.is_complete_text():
+                raise TypeError(f"Lexer {self.lexer_conf.lexer_type} does not support text slices.")
+    
+        chosen_start = self._verify_start(start)
+        kw = {} if on_error is None else {'on_error': on_error}
+        stream = self._make_lexer_thread(text)
+>       return self.parser.parse(stream, chosen_start, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parser_frontends.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser.LALR_Parser object at 0x0000026FEE5AFD90>
+lexer = <lark.lexer.LexerThread object at 0x0000026FEE7E8B90>, start = 'start'
+on_error = None
+
+    def parse(self, lexer, start, on_error=None):
+        try:
+>           return self.parser.parse(lexer, start)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+lexer = <lark.lexer.LexerThread object at 0x0000026FEE7E8B90>, start = 'start'
+value_stack = None, state_stack = None, start_interactive = False
+
+    def parse(self, lexer: LexerThread, start: str, value_stack=None, state_stack=None, start_interactive=False):
+        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
+        parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
+        if start_interactive:
+            return InteractiveParser(self, parser_state, parser_state.lexer)
+>       return self.parse_from_state(parser_state)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:88: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE60CF00>
+last_token = None
+
+    def parse_from_state(self, state: ParserState, last_token: Optional[Token]=None):
+        """Run the main LALR parser loop
+    
+        Parameters:
+            state - the initial state. Changed in-place.
+            last_token - Used only for line information in case of an empty lexer.
+        """
+        try:
+            token = last_token
+            for token in state.lexer.lex(state):
+                assert token is not None
+                state.feed_token(token)
+    
+            end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            return state.feed_token(end_token, True)
+        except UnexpectedInput as e:
+            try:
+                e.interactive_parser = InteractiveParser(self, state, state.lexer)
+            except NameError:
+                pass
+>           raise e
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE60CF00>
+last_token = None
+
+    def parse_from_state(self, state: ParserState, last_token: Optional[Token]=None):
+        """Run the main LALR parser loop
+    
+        Parameters:
+            state - the initial state. Changed in-place.
+            last_token - Used only for line information in case of an empty lexer.
+        """
+        try:
+            token = last_token
+>           for token in state.lexer.lex(state):
+                         ^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.lexer.ContextualLexer object at 0x0000026FEE5E2BA0>
+lexer_state = <lark.lexer.LexerState object at 0x0000026FEE60CF40>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE60CF00>
+
+    def lex(self, lexer_state: LexerState, parser_state: 'ParserState') -> Iterator[Token]:
+        try:
+            while True:
+                lexer = self.lexers[parser_state.position]
+                yield lexer.next_token(lexer_state, parser_state)
+        except EOFError:
+            pass
+        except UnexpectedCharacters as e:
+            # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
+            # This tests the input against the global context, to provide a nicer error.
+            try:
+                last_token = lexer_state.last_token  # Save last_token. Calling root_lexer.next_token will change this to the wrong token
+                token = self.root_lexer.next_token(lexer_state, parser_state)
+>               raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
+E               lark.exceptions.UnexpectedToken: Unexpected token Token('PAR', 'par') at line 2, column 5.
+E               Expected one of: 
+E               	* POLICY
+E               	* TEAM
+E               	* ROLE
+E               	* PROCESS
+E               	* $END
+E               	* RESOURCE
+E               	* TYPE
+E               	* CHAIN
+E               	* FLOW
+E               	* RESULT
+E               Previous tokens: [None]
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:698: UnexpectedToken
+
+The above exception was the direct cause of the following exception:
+
+    def test_parse_example_file():
+        p = Path(__file__).resolve().parents[1] / "examples" / "example1.flow"
+>       tree = parse(p)
+               ^^^^^^^^
+
+tests\test_grammar.py:9: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = WindowsPath('C:/Users/asusu/CascadeProjects/flowlang/flowlang/examples/example1.flow')
+
+    def parse(source: str | Path) -> Tree:
+        try:
+            text = Path(source).read_text(encoding="utf-8") if isinstance(source, Path) or (isinstance(source, str) and Path(source).exists()) else str(source)
+            parser = _load_parser()
+            return parser.parse(text)
+        except Exception as e:
+>           raise ParseError(str(e)) from e
+E           flowlang.errors.ParseError: Unexpected token Token('PAR', 'par') at line 2, column 5.
+E           Expected one of: 
+E           	* POLICY
+E           	* TEAM
+E           	* ROLE
+E           	* PROCESS
+E           	* $END
+E           	* RESOURCE
+E           	* TYPE
+E           	* CHAIN
+E           	* FLOW
+E           	* RESULT
+E           Previous tokens: [None]
+
+flowlang\parser.py:22: ParseError
+___________________________ test_parse_min_program ____________________________
+
+self = <lark.lexer.ContextualLexer object at 0x0000026FEE5E2BA0>
+lexer_state = <lark.lexer.LexerState object at 0x0000026FEE9A3080>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE9A2F00>
+
+    def lex(self, lexer_state: LexerState, parser_state: 'ParserState') -> Iterator[Token]:
+        try:
+            while True:
+                lexer = self.lexers[parser_state.position]
+>               yield lexer.next_token(lexer_state, parser_state)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:689: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.lexer.BasicLexer object at 0x0000026FEE59A520>
+lex_state = <lark.lexer.LexerState object at 0x0000026FEE9A3080>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE9A2F00>
+
+    def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
+        line_ctr = lex_state.line_ctr
+        while line_ctr.char_pos < lex_state.text.end:
+            res = self.match(lex_state.text, line_ctr.char_pos)
+            if not res:
+                allowed = self.scanner.allowed_types - self.ignore_types
+                if not allowed:
+                    allowed = {"<END-OF-FILE>"}
+>               raise UnexpectedCharacters(lex_state.text.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
+                                           state=parser_state, terminals_by_name=self.terminals_by_name)
+E               lark.exceptions.UnexpectedCharacters: No terminal matches ';' in the current parser context, at line 4 col 87
+E               
+E               cay=0.5, backprop=true, forward=true); };
+E                                                       ^
+E               Expected one of: 
+E               	* POLICY
+E               	* TEAM
+E               	* ROLE
+E               	* PROCESS
+E               	* RESOURCE
+E               	* TYPE
+E               	* CHAIN
+E               	* FLOW
+E               	* RESULT
+E               
+E               Previous tokens: Token('RBRACE', '}')
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:622: UnexpectedCharacters
+
+During handling of the above exception, another exception occurred:
+
+source = 'result R { x: number; };\ntype Command<Search>;\nteam T: Command<Search> [size=1];\nchain C { nodes: [A,B]; propagati...=true, forward=true); };\nprocess P "X" { root: "R"; };\nflow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+
+    def parse(source: str | Path) -> Tree:
+        try:
+            text = Path(source).read_text(encoding="utf-8") if isinstance(source, Path) or (isinstance(source, str) and Path(source).exists()) else str(source)
+            parser = _load_parser()
+>           return parser.parse(text)
+                   ^^^^^^^^^^^^^^^^^^
+
+flowlang\parser.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Lark(open('<string>'), parser='lalr', lexer='contextual', ...)
+text = 'result R { x: number; };\ntype Command<Search>;\nteam T: Command<Search> [size=1];\nchain C { nodes: [A,B]; propagati...=true, forward=true); };\nprocess P "X" { root: "R"; };\nflow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+start = None, on_error = None
+
+    def parse(self, text: LarkInput, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+        """Parse the given text, according to the options provided.
+    
+        Parameters:
+            text (LarkInput): Text to be parsed, as `str` or `bytes`.
+                TextSlice may also be used, but only when lexer='basic' or 'contextual'.
+                If Lark was created with a custom lexer, this may be an object of any type.
+            start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
+            on_error (function, optional): if provided, will be called on UnexpectedInput error,
+                with the exception as its argument. Return true to resume parsing, or false to raise the exception.
+                LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
+    
+        Returns:
+            If a transformer is supplied to ``__init__``, returns whatever is the
+            result of the transformation. Otherwise, returns a Tree instance.
+    
+        :raises UnexpectedInput: On a parse error, one of these sub-exceptions will rise:
+                ``UnexpectedCharacters``, ``UnexpectedToken``, or ``UnexpectedEOF``.
+                For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
+    
+        """
+        if on_error is not None and self.options.parser != 'lalr':
+            raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
+>       return self.parser.parse(text, start=start, on_error=on_error)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lark.py:677: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parser_frontends.ParsingFrontend object at 0x0000026FEE5AFED0>
+text = 'result R { x: number; };\ntype Command<Search>;\nteam T: Command<Search> [size=1];\nchain C { nodes: [A,B]; propagati...=true, forward=true); };\nprocess P "X" { root: "R"; };\nflow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+start = None, on_error = None
+
+    def parse(self, text: Optional[LarkInput], start=None, on_error=None):
+        if self.lexer_conf.lexer_type in ("dynamic", "dynamic_complete"):
+            if isinstance(text, TextSlice) and not text.is_complete_text():
+                raise TypeError(f"Lexer {self.lexer_conf.lexer_type} does not support text slices.")
+    
+        chosen_start = self._verify_start(start)
+        kw = {} if on_error is None else {'on_error': on_error}
+        stream = self._make_lexer_thread(text)
+>       return self.parser.parse(stream, chosen_start, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parser_frontends.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser.LALR_Parser object at 0x0000026FEE5AFD90>
+lexer = <lark.lexer.LexerThread object at 0x0000026FEEA63BD0>, start = 'start'
+on_error = None
+
+    def parse(self, lexer, start, on_error=None):
+        try:
+>           return self.parser.parse(lexer, start)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+lexer = <lark.lexer.LexerThread object at 0x0000026FEEA63BD0>, start = 'start'
+value_stack = None, state_stack = None, start_interactive = False
+
+    def parse(self, lexer: LexerThread, start: str, value_stack=None, state_stack=None, start_interactive=False):
+        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
+        parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
+        if start_interactive:
+            return InteractiveParser(self, parser_state, parser_state.lexer)
+>       return self.parse_from_state(parser_state)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:88: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE9A2F00>
+last_token = None
+
+    def parse_from_state(self, state: ParserState, last_token: Optional[Token]=None):
+        """Run the main LALR parser loop
+    
+        Parameters:
+            state - the initial state. Changed in-place.
+            last_token - Used only for line information in case of an empty lexer.
+        """
+        try:
+            token = last_token
+            for token in state.lexer.lex(state):
+                assert token is not None
+                state.feed_token(token)
+    
+            end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            return state.feed_token(end_token, True)
+        except UnexpectedInput as e:
+            try:
+                e.interactive_parser = InteractiveParser(self, state, state.lexer)
+            except NameError:
+                pass
+>           raise e
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.parsers.lalr_parser._Parser object at 0x0000026FEE7E8410>
+state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE9A2F00>
+last_token = None
+
+    def parse_from_state(self, state: ParserState, last_token: Optional[Token]=None):
+        """Run the main LALR parser loop
+    
+        Parameters:
+            state - the initial state. Changed in-place.
+            last_token - Used only for line information in case of an empty lexer.
+        """
+        try:
+            token = last_token
+>           for token in state.lexer.lex(state):
+                         ^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\parsers\lalr_parser.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <lark.lexer.ContextualLexer object at 0x0000026FEE5E2BA0>
+lexer_state = <lark.lexer.LexerState object at 0x0000026FEE9A3080>
+parser_state = <lark.parsers.lalr_parser_state.ParserState object at 0x0000026FEE9A2F00>
+
+    def lex(self, lexer_state: LexerState, parser_state: 'ParserState') -> Iterator[Token]:
+        try:
+            while True:
+                lexer = self.lexers[parser_state.position]
+                yield lexer.next_token(lexer_state, parser_state)
+        except EOFError:
+            pass
+        except UnexpectedCharacters as e:
+            # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
+            # This tests the input against the global context, to provide a nicer error.
+            try:
+                last_token = lexer_state.last_token  # Save last_token. Calling root_lexer.next_token will change this to the wrong token
+                token = self.root_lexer.next_token(lexer_state, parser_state)
+>               raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
+E               lark.exceptions.UnexpectedToken: Unexpected token Token('SEMICOLON', ';') at line 4, column 87.
+E               Expected one of: 
+E               	* POLICY
+E               	* TEAM
+E               	* ROLE
+E               	* PROCESS
+E               	* $END
+E               	* RESOURCE
+E               	* TYPE
+E               	* CHAIN
+E               	* FLOW
+E               	* RESULT
+E               Previous tokens: [Token('RBRACE', '}')]
+
+..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\lark\lexer.py:698: UnexpectedToken
+
+The above exception was the direct cause of the following exception:
+
+    def test_parse_min_program():
+        src = (
+            'result R { x: number; };\n'
+            'type Command<Search>;\n'
+            'team T: Command<Search> [size=1];\n'
+            'chain C { nodes: [A,B]; propagation: causal(decay=0.5, backprop=true, forward=true); };\n'
+            'process P "X" { root: "R"; };\n'
+            'flow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+        )
+>       tree = parse(src)
+               ^^^^^^^^^^
+
+tests\test_grammar.py:22: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = 'result R { x: number; };\ntype Command<Search>;\nteam T: Command<Search> [size=1];\nchain C { nodes: [A,B]; propagati...=true, forward=true); };\nprocess P "X" { root: "R"; };\nflow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+
+    def parse(source: str | Path) -> Tree:
+        try:
+            text = Path(source).read_text(encoding="utf-8") if isinstance(source, Path) or (isinstance(source, str) and Path(source).exists()) else str(source)
+            parser = _load_parser()
+            return parser.parse(text)
+        except Exception as e:
+>           raise ParseError(str(e)) from e
+E           flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 4, column 87.
+E           Expected one of: 
+E           	* POLICY
+E           	* TEAM
+E           	* ROLE
+E           	* PROCESS
+E           	* $END
+E           	* RESOURCE
+E           	* TYPE
+E           	* CHAIN
+E           	* FLOW
+E           	* RESULT
+E           Previous tokens: [Token('RBRACE', '}')]
+
+flowlang\parser.py:22: ParseError
+___________________________ test_strict_team_typing ___________________________
+
+    def test_strict_team_typing():
+        rt = Runtime(dry_run=True)
+        source = """
+        team t : Command<Search> [size=1];
+        flow main(using: t) {
+            checkpoint "init" {
+                t.ask("hello");
+            }
+        }
+        """
+>       rt.load(source)
+
+tests\test_concept_alignment.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <flowlang.runtime.Runtime object at 0x0000026FEE5E3E00>
+source = '\n    team t : Command<Search> [size=1];\n    flow main(using: t) {\n        checkpoint "init" {\n            t.ask("hello"); \n        }\n    }\n    '
+
+    def load(self, source: str | Path) -> Tree:
+        self.tree = parse(source)
+>       SemanticAnalyzer(self.tree).analyze()
+
+flowlang\runtime.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <flowlang.semantic.SemanticAnalyzer object at 0x0000026FEEBC2120>
+
+    def analyze(self) -> None:
+        # first pass: collect declarations
+        for node in self.tree.find_data("team_decl"):
+            # structure: team IDENT : Command < COMMAND_KIND > [ opts ] ;
+            name = None
+            kind = None
+            for ch in node.children:
+                if isinstance(ch, Token) and ch.type == "IDENT" and name is None:
+                    name = str(ch)
+                if isinstance(ch, Token) and ch.type == "COMMAND_KIND" and kind is None:
+                    kind = CommandKind(str(ch))
+            if name is None or kind is None:
+                raise SemanticError("Malformed team declaration (missing name or COMMAND_KIND)")
+            self.teams[name] = TeamInfo(name, kind)
+    
+        for node in self.tree.find_data("chain_decl"):
+            # chain IDENT { nodes: [...] }
+            name = None
+            for ch in node.children:
+                if isinstance(ch, Token) and ch.type == "IDENT":
+                    name = str(ch)
+                    break
+            if name is None:
+                raise SemanticError("Malformed chain declaration (missing name)")
+            nodes_block = next(node.find_data("ident_list"), None)
+            nodes = set()
+            if nodes_block:
+                for ch in nodes_block.children:
+                    if isinstance(ch, Token):
+                        nodes.add(str(ch))
+            self.chains[name] = ChainInfo(name, nodes)
+    
+        # collect declared result types
+        any_result = False
+        for res in self.tree.find_data("result_decl"):
+            any_result = True
+            rname = None
+            fields: Set[str] = set()
+            for ch in res.children:
+                if isinstance(ch, Token) and ch.type == "IDENT" and rname is None:
+                    rname = str(ch)
+            for fld in res.find_data("result_field"):
+                fname = str(fld.children[0])
+                fields.add(fname)
+            if rname:
+                self.result_fields[rname] = fields
+        if not any_result:
+            # defaults if user didn't declare
+            self.result_fields = {
+                "JudgeResult": {"confidence", "score", "pass"},
+                "TryResult": {"output", "metrics"},
+                "SearchResult": {"hits"},
+                "CommunicateResult": {"text"},
+            }
+    
+        # collect process names
+        for node in self.tree.find_data("process_decl"):
+            # process IDENT STRING { ... }
+            for ch in node.children:
+                if isinstance(ch, Token) and ch.type == "IDENT":
+                    self.processes.add(str(ch))
+                    break
+    
+        for node in self.tree.find_data("flow_decl"):
+            flow_name = None
+            for ch in node.children:
+                if isinstance(ch, Token) and ch.type == "IDENT":
+                    flow_name = str(ch)
+                    break
+            if flow_name is None:
+                raise SemanticError("Malformed flow declaration (missing name)")
+            # params
+            params = []
+            for lst in node.find_data("ident_list"):
+                # the first ident_list inside flow_params is teams list
+                for ch in lst.children:
+                    if isinstance(ch, Token):
+                        params.append(str(ch))
+                break
+            # checkpoints
+            cps: List[str] = []
+            for cp in node.find_data("checkpoint"):
+                cp_name = cp.children[0].value  # STRING token
+                cps.append(cp_name)
+            self.flows[flow_name] = FlowInfo(flow_name, params, cps)
+    
+        # second pass: validate actions and controls within flows
+        for flow_node in self.tree.find_data("flow_decl"):
+            flow_name = str(flow_node.children[0])
+            flow_info = self.flows.get(flow_name)
+            if not flow_info:
+                continue
+    
+            # Ensure referenced teams exist
+            for t in flow_info.teams:
+                if t not in self.teams:
+                    raise SemanticError(f"Flow '{flow_name}' references unknown team '{t}'")
+    
+            # Validate statements within flow
+            # reset per-flow var types
+            self.var_types = {}
+    
+            for act in flow_node.find_data("action_stmt"):
+                team_ident = str(act.children[0])
+                if team_ident not in self.teams:
+                    raise SemanticError(f"Unknown team '{team_ident}' in flow '{flow_name}'")
+                team_info = self.teams[team_ident]
+                cmd_node = act.children[1]
+                if isinstance(cmd_node, Tree) and cmd_node.data == "command_action":
+                    verb_tok = cmd_node.children[0]  # Token for verb
+                    verb = str(verb_tok)
+>                   self._check_team_action(team_info, verb, flow_name)
+
+flowlang\semantic.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <flowlang.semantic.SemanticAnalyzer object at 0x0000026FEEBC2120>
+team = TeamInfo(name='t', kind=<CommandKind.Search: 'Search'>)
+verb = 'Tree(Token(\'RULE\', \'arg_list\'), [Tree(Token(\'RULE\', \'named_arg\'), [Tree(\'string\', [Token(\'STRING\', \'"hello"\')])])])'
+flow_name = 'main'
+
+    def _check_team_action(self, team: TeamInfo, verb: str, flow_name: str) -> None:
+        mapping = {
+            CommandKind.Search: "search",
+            CommandKind.Try: "try",
+            CommandKind.Judge: "judge",
+            CommandKind.Communicate: "ask",
+        }
+        expected = mapping.get(team.kind)
+        # Standardize verb for comparison against expected keyword literal
+        actual = str(verb).strip().lower()
+        if expected != actual:
+>           raise SemanticError(
+                f"Team '{team.name}' of kind {team.kind.value} cannot perform {repr(actual)}. Expected {repr(expected)}.")
+E           flowlang.errors.SemanticError: Team 't' of kind Search cannot perform 'tree(token(\'rule\', \'arg_list\'), [tree(token(\'rule\', \'named_arg\'), [tree(\'string\', [token(\'string\', \'"hello"\')])])])'. Expected 'search'.
+
+flowlang\semantic.py:230: SemanticError
+_________________________ test_order_batch_processing _________________________
+
+    def test_order_batch_processing():
+        rt = Runtime(dry_run=True)
+        source = """
+        team t1 : Command<Try> [size=1];
+        flow main(using: t1) {
+            checkpoint "run" {
+                v = t1.try(my_items);
+            }
+        }
+        """
+        rt.load(source)
+        # Inject orders into variables manually for the test
+        orders = [
+            Order(id="1", payload="task1", kind=CommandKind.Try),
+            Order(id="2", payload="task2", kind=CommandKind.Try)
+        ]
+    
+        # We need a way to inject variables. Let's hijack _execute_flow to use our ctx.
+        # Actually, we can just run a flow that sets them, or use a mock.
+        # Let's just manually call _exec_action to test the logic.
+        from flowlang.runtime import EvalContext
+        ctx = EvalContext(variables={"my_items": orders}, checkpoints=["run"])
+        # Get the action node from the tree
+>       action_node = list(rt.tree.find_data("action_stmt"))[0]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       IndexError: list index out of range
+
+tests\test_concept_alignment.py:43: IndexError
+_______________________ test_checkpoint_report_handover _______________________
+
+    def test_checkpoint_report_handover():
+        source = """
+        team t1 : Command<Search> [size=1];
+        flow main(using: t1) {
+            checkpoint "step1" (report: ["res"]) {
+                temp = "hidden";
+                res = "keep me";
+            }
+            checkpoint "step2" {
+                // temp should be gone here
+            }
+        }
+        """
+        rt = Runtime(dry_run=True)
+        rt.load(source)
+        rt.run_flow("main")
+    
+        # Check console for pruning log
+>       assert any("pruned 1 keys" in l for l in rt.console)
+E       assert False
+E        +  where False = any(<generator object test_checkpoint_report_handover.<locals>.<genexpr> at 0x0000026FEFF47510>)
+
+tests\test_concept_alignment.py:69: AssertionError
+---------------------------- Captured stdout call -----------------------------
+13:14:13 | [flow] Start 'main' with checkpoints: ['"step1"', '"step2"']
+13:14:13 | [checkpoint] -> "step1"
+13:14:13 | [set] temp = hidden
+13:14:13 | [set] res = keep me
+{
+    "name": "checkpoint:\"step1\"",
+    "context": {
+        "trace_id": "0x8deab1c0d32594c5b66e8aecd324fb68",
+        "span_id": "0xb0494f90caa1c7ed",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": "0x0922957fcbc22e79",
+    "start_time": "2026-02-14T12:14:13.188551Z",
+    "end_time": "2026-02-14T12:14:13.188907Z",
+    "status": {
+        "status_code": "UNSET"
+    },
+    "attributes": {},
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.38.0",
+            "service.name": "unknown_service"
+        },
+        "schema_url": ""
+    }
+}
+
+13:14:13 | [checkpoint.done] "step1" in 0.76 ms
+13:14:13 | [checkpoint] Report handover: kept ['[]'], pruned 2 keys
+13:14:13 | [persistence] Saved state to ./.flowlang_state\main_2026-02-14T13-14-13.189623.pkl
+13:14:13 | [checkpoint] -> "step2"
+{
+    "name": "checkpoint:\"step2\"",
+    "context": {
+        "trace_id": "0x8deab1c0d32594c5b66e8aecd324fb68",
+        "span_id": "0xdb9179bb3aeab953",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": "0x0922957fcbc22e79",
+    "start_time": "2026-02-14T12:14:13.192697Z",
+    "end_time": "2026-02-14T12:14:13.192730Z",
+    "status": {
+        "status_code": "UNSET"
+    },
+    "attributes": {},
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.38.0",
+            "service.name": "unknown_service"
+        },
+        "schema_url": ""
+    }
+}
+
+13:14:13 | [checkpoint.done] "step2" in 0.28 ms
+13:14:13 | [persistence] Saved state to ./.flowlang_state\main_2026-02-14T13-14-13.193122.pkl
+13:14:13 | [flow] End 'main'
+13:14:13 | [metrics] {'actions': 0, 'checkpoints': 2, 'back_to': 0, 'verbs': {}, 'checkpoint_ms': {'"step1"': 0.7585999555885792, '"step2"': 0.28399983420968056}}
+{
+    "name": "flow:main",
+    "context": {
+        "trace_id": "0x8deab1c0d32594c5b66e8aecd324fb68",
+        "span_id": "0x0922957fcbc22e79",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": null,
+    "start_time": "2026-02-14T12:14:13.187650Z",
+    "end_time": "2026-02-14T12:14:13.195415Z",
+    "status": {
+        "status_code": "UNSET"
+    },
+    "attributes": {},
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.38.0",
+            "service.name": "unknown_service"
+        },
+        "schema_url": ""
+    }
+}
+
+____________________________ test_orders_promotion ____________________________
+
+    def test_orders_promotion():
+        rt = Runtime(dry_run=True)
+        rt.load("""
+        team t1 : Command<Search> [size=1];
+        flow main(using: t1) {
+            checkpoint "start" {
+                v = t1.search("query");
+            }
+        }
+        """)
+        rt.run_flow("main")
+>       v = rt.persistence.load_state(rt.console[-1].split(" ")[-1]).eval_context.get("v")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_concept_alignment.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <flowlang.persistence.PersistenceManager object at 0x0000026FEE9D76F0>
+path = '0.40060002356767654}}'
+
+    def load_state(self, path: str) -> FlowState:
+        """Load state from a file path."""
+        if not os.path.exists(path):
+>           raise FileNotFoundError(f"State file not found: {path}")
+E           FileNotFoundError: State file not found: 0.40060002356767654}}
+
+flowlang\persistence.py:85: FileNotFoundError
+---------------------------- Captured stdout call -----------------------------
+13:14:13 | [flow] Start 'main' with checkpoints: ['"start"']
+13:14:13 | [checkpoint] -> "start"
+13:14:13 | [set] v = TypedValue(tag=<ValueTag.SearchResult: 'SearchResult'>, value=None, meta={'hits': ['doc://0:query', 'doc://1:query', 'doc://2:query']})
+{
+    "name": "checkpoint:\"start\"",
+    "context": {
+        "trace_id": "0xb401ae1a3677e5c32d3c50f988cc6417",
+        "span_id": "0xf72a17082d1c73b4",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": "0xdb0a0fa5e0d6f6ed",
+    "start_time": "2026-02-14T12:14:13.206135Z",
+    "end_time": "2026-02-14T12:14:13.206363Z",
+    "status": {
+        "status_code": "UNSET"
+    },
+    "attributes": {},
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.38.0",
+            "service.name": "unknown_service"
+        },
+        "schema_url": ""
+    }
+}
+
+13:14:13 | [checkpoint.done] "start" in 0.40 ms
+13:14:13 | [persistence] Saved state to ./.flowlang_state\main_2026-02-14T13-14-13.206625.pkl
+13:14:13 | [flow] End 'main'
+13:14:13 | [metrics] {'actions': 1, 'checkpoints': 1, 'back_to': 0, 'verbs': {'search': 1}, 'checkpoint_ms': {'"start"': 0.40060002356767654}}
+{
+    "name": "flow:main",
+    "context": {
+        "trace_id": "0xb401ae1a3677e5c32d3c50f988cc6417",
+        "span_id": "0xdb0a0fa5e0d6f6ed",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": null,
+    "start_time": "2026-02-14T12:14:13.205494Z",
+    "end_time": "2026-02-14T12:14:13.208544Z",
+    "status": {
+        "status_code": "UNSET"
+    },
+    "attributes": {},
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.38.0",
+            "service.name": "unknown_service"
+        },
+        "schema_url": ""
+    }
+}
+
+_____________ TestMalformedAIResponse.test_missing_required_field _____________
+
+verb = 'judge', data = {'score': 0.8}
+
+    def validate_response(verb: str, data: Dict[str, Any]) -> BaseModel:
+        """Validate AI response against the appropriate schema.
+    
+        Args:
+            verb: The verb that was executed (ask, search, try, judge)
+            data: The parsed JSON response from the AI
+    
+        Returns:
+            Validated Pydantic model instance
+    
+        Raises:
+            SchemaValidationError: If validation fails
+        """
+        from .errors import SchemaValidationError
+    
+        schema_cls = VERB_SCHEMAS.get(verb)
+        if schema_cls is None:
+            # Unknown verb, return raw data wrapped in a generic model
+            return TryResult(output=str(data), metrics={})
+    
+        try:
+>           return schema_cls.model_validate(data)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           pydantic_core._pydantic_core.ValidationError: 2 validation errors for JudgeResult
+E           confidence
+E             Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+E               For further information visit https://errors.pydantic.dev/2.12/v/missing
+E           pass
+E             Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+E               For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+flowlang\schemas.py:139: ValidationError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_robustness.TestMalformedAIResponse object at 0x0000026FEE5AC910>
+
+    def test_missing_required_field(self):
+        """Verify partial JSON doesn't crash."""
+        from flowlang.ai_providers import _map_to_typed_value
+    
+        content = '{"score": 0.8}'  # Missing confidence and pass
+        parsed = {"score": 0.8}
+        kwargs = {}
+    
+>       result = _map_to_typed_value("judge", content, parsed, kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_robustness.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+verb = 'judge', content = '{"score": 0.8}', parsed = {'score': 0.8}, kwargs = {}
+
+    def _map_to_typed_value(verb: str, content: str, parsed: Optional[Dict[str, Any]], kwargs: Dict[str, Any]) -> TypedValue:
+        """Map AI response to TypedValue with strict schema validation.
+    
+        Raises SchemaValidationError if the response doesn't match the expected schema.
+        """
+        from .schemas import validate_response, JudgeResult, SearchResult, TryResult, CommunicateResult
+    
+        # Build data dict for validation
+        if parsed is None:
+            # If we couldn't parse JSON, construct minimal data from raw content
+            if verb == "ask":
+                data = {"text": content, "history": kwargs.get("history", [])}
+            elif verb == "search":
+                data = {"hits": [content] if content else []}
+            elif verb == "try":
+                data = {"output": content, "metrics": {}}
+            elif verb == "judge":
+                # Raw content for judge is a validation failure - we need structured data
+                from .errors import SchemaValidationError
+                raise SchemaValidationError(
+                    f"AI response for 'judge' must be valid JSON with score/confidence/pass fields.\n"
+                    f"Received raw content: {content[:200]}..."
+                )
+            else:
+                data = {"output": content, "metrics": {}}
+        else:
+            data = parsed
+    
+        # Validate and get typed model
+>       validated = validate_response(verb, data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+flowlang\ai_providers.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+verb = 'judge', data = {'score': 0.8}
+
+    def validate_response(verb: str, data: Dict[str, Any]) -> BaseModel:
+        """Validate AI response against the appropriate schema.
+    
+        Args:
+            verb: The verb that was executed (ask, search, try, judge)
+            data: The parsed JSON response from the AI
+    
+        Returns:
+            Validated Pydantic model instance
+    
+        Raises:
+            SchemaValidationError: If validation fails
+        """
+        from .errors import SchemaValidationError
+    
+        schema_cls = VERB_SCHEMAS.get(verb)
+        if schema_cls is None:
+            # Unknown verb, return raw data wrapped in a generic model
+            return TryResult(output=str(data), metrics={})
+    
+        try:
+            return schema_cls.model_validate(data)
+        except Exception as e:
+>           raise SchemaValidationError(
+                f"AI response for '{verb}' failed schema validation: {e}\n"
+                f"Received data: {data}"
+            )
+E           flowlang.errors.SchemaValidationError: AI response for 'judge' failed schema validation: 2 validation errors for JudgeResult
+E           confidence
+E             Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+E               For further information visit https://errors.pydantic.dev/2.12/v/missing
+E           pass
+E             Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+E               For further information visit https://errors.pydantic.dev/2.12/v/missing
+E           Received data: {'score': 0.8}
+
+flowlang\schemas.py:141: SchemaValidationError
+_____________ TestMalformedAIResponse.test_wrong_type_in_response _____________
+
+verb = 'judge', data = {'confidence': 'very', 'pass': 'yes', 'score': 'high'}
+
+    def validate_response(verb: str, data: Dict[str, Any]) -> BaseModel:
+        """Validate AI response against the appropriate schema.
+    
+        Args:
+            verb: The verb that was executed (ask, search, try, judge)
+            data: The parsed JSON response from the AI
+    
+        Returns:
+            Validated Pydantic model instance
+    
+        Raises:
+            SchemaValidationError: If validation fails
+        """
+        from .errors import SchemaValidationError
+    
+        schema_cls = VERB_SCHEMAS.get(verb)
+        if schema_cls is None:
+            # Unknown verb, return raw data wrapped in a generic model
+            return TryResult(output=str(data), metrics={})
+    
+        try:
+>           return schema_cls.model_validate(data)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           pydantic_core._pydantic_core.ValidationError: 2 validation errors for JudgeResult
+E           score
+E             Value error, Cannot convert 'high' to float [type=value_error, input_value='high', input_type=str]
+E               For further information visit https://errors.pydantic.dev/2.12/v/value_error
+E           confidence
+E             Value error, Cannot convert 'very' to float [type=value_error, input_value='very', input_type=str]
+E               For further information visit https://errors.pydantic.dev/2.12/v/value_error
+
+flowlang\schemas.py:139: ValidationError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_robustness.TestMalformedAIResponse object at 0x0000026FEE598B00>
+
+    def test_wrong_type_in_response(self):
+        """Verify wrong types are handled."""
+        from flowlang.ai_providers import _map_to_typed_value
+    
+        # AI returns string instead of number
+        content = '{"score": "high", "confidence": "very", "pass": "yes"}'
+        parsed = {"score": "high", "confidence": "very", "pass": "yes"}
+        kwargs = {}
+    
+>       result = _map_to_typed_value("judge", content, parsed, kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_robustness.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+verb = 'judge'
+content = '{"score": "high", "confidence": "very", "pass": "yes"}'
+parsed = {'confidence': 'very', 'pass': 'yes', 'score': 'high'}, kwargs = {}
+
+    def _map_to_typed_value(verb: str, content: str, parsed: Optional[Dict[str, Any]], kwargs: Dict[str, Any]) -> TypedValue:
+        """Map AI response to TypedValue with strict schema validation.
+    
+        Raises SchemaValidationError if the response doesn't match the expected schema.
+        """
+        from .schemas import validate_response, JudgeResult, SearchResult, TryResult, CommunicateResult
+    
+        # Build data dict for validation
+        if parsed is None:
+            # If we couldn't parse JSON, construct minimal data from raw content
+            if verb == "ask":
+                data = {"text": content, "history": kwargs.get("history", [])}
+            elif verb == "search":
+                data = {"hits": [content] if content else []}
+            elif verb == "try":
+                data = {"output": content, "metrics": {}}
+            elif verb == "judge":
+                # Raw content for judge is a validation failure - we need structured data
+                from .errors import SchemaValidationError
+                raise SchemaValidationError(
+                    f"AI response for 'judge' must be valid JSON with score/confidence/pass fields.\n"
+                    f"Received raw content: {content[:200]}..."
+                )
+            else:
+                data = {"output": content, "metrics": {}}
+        else:
+            data = parsed
+    
+        # Validate and get typed model
+>       validated = validate_response(verb, data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+flowlang\ai_providers.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+verb = 'judge', data = {'confidence': 'very', 'pass': 'yes', 'score': 'high'}
+
+    def validate_response(verb: str, data: Dict[str, Any]) -> BaseModel:
+        """Validate AI response against the appropriate schema.
+    
+        Args:
+            verb: The verb that was executed (ask, search, try, judge)
+            data: The parsed JSON response from the AI
+    
+        Returns:
+            Validated Pydantic model instance
+    
+        Raises:
+            SchemaValidationError: If validation fails
+        """
+        from .errors import SchemaValidationError
+    
+        schema_cls = VERB_SCHEMAS.get(verb)
+        if schema_cls is None:
+            # Unknown verb, return raw data wrapped in a generic model
+            return TryResult(output=str(data), metrics={})
+    
+        try:
+            return schema_cls.model_validate(data)
+        except Exception as e:
+>           raise SchemaValidationError(
+                f"AI response for '{verb}' failed schema validation: {e}\n"
+                f"Received data: {data}"
+            )
+E           flowlang.errors.SchemaValidationError: AI response for 'judge' failed schema validation: 2 validation errors for JudgeResult
+E           score
+E             Value error, Cannot convert 'high' to float [type=value_error, input_value='high', input_type=str]
+E               For further information visit https://errors.pydantic.dev/2.12/v/value_error
+E           confidence
+E             Value error, Cannot convert 'very' to float [type=value_error, input_value='very', input_type=str]
+E               For further information visit https://errors.pydantic.dev/2.12/v/value_error
+E           Received data: {'score': 'high', 'confidence': 'very', 'pass': 'yes'}
+
+flowlang\schemas.py:141: SchemaValidationError
+________ TestProcessTreePolicies.test_protected_node_collapse_blocked _________
+
+self = <test_robustness.TestProcessTreePolicies object at 0x0000026FEE5ACB90>
+
+    def test_protected_node_collapse_blocked(self):
+        """Verify protected nodes cannot be collapsed."""
+        rt = Runtime()
+        rt.processes["TestProcess"] = {
+            "nodes": {"Root": {}, "Protected": {}, "Normal": {}},
+            "policies": {"protected_nodes": "Root,Protected"},
+            "marks": {},
+        }
+    
+        ctx = EvalContext(variables={}, checkpoints=[])
+    
+        # Attempting to collapse protected node should raise
+        from flowlang.errors import RuntimeFlowError
+>       with pytest.raises(RuntimeFlowError, match="protected"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'flowlang.errors.RuntimeFlowError'>
+
+tests\test_robustness.py:179: Failed
+---------------------------- Captured stdout call -----------------------------
+13:14:13 | [process] TestProcess.collapse Protected
+_________________ TestHumanGates.test_dry_run_action_skipped __________________
+
+self = <test_human_gates.TestHumanGates object at 0x0000026FEE598E90>
+
+    def test_dry_run_action_skipped(self):
+        rt = Runtime(dry_run=True)
+        ctx = EvalContext(variables={}, checkpoints=[])
+    
+        # action: Team.Do(args)
+        # Tree structure for _exec_action:
+        # children: [Team, ActionTree]
+        # ActionTree children: [Verb, ArgList]
+    
+        action_node = Tree("command_action", [Token("IDENT", "ask"), Tree("arg_list", [])])
+        node = Tree("action_stmt", [Token("IDENT", "TeamA"), action_node])
+    
+        rt._exec_action(node, ctx)
+    
+        # Result should be Unknown/dry_run
+        res = ctx.variables.get("_")
+>       assert res.tag.name == "Unknown"
+               ^^^^^^^
+E       AttributeError: 'Order' object has no attribute 'tag'
+
+tests\test_human_gates.py:73: AttributeError
+---------------------------- Captured stdout call -----------------------------
+13:14:13 | [dry_run] Skip TeamA.ask
+============================== warnings summary ===============================
+flowlang\ai_providers.py:23
+  C:\Users\asusu\CascadeProjects\flowlang\flowlang\flowlang\ai_providers.py:23: FutureWarning: 
+  
+  All support for the `google.generativeai` package has ended. It will no longer be receiving 
+  updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+  See README for more details:
+  
+  https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+  
+    import google.generativeai as genai  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_grammar.py::test_parse_example_file - flowlang.errors.ParseError: Unexpected token Token('PAR', 'par') at line 2, column 5.
+Expected one of: 
+	* POLICY
+	* TEAM
+	* ROLE
+	* PROCESS
+	* $END
+	* RESOURCE
+	* TYPE
+	* CHAIN
+	* FLOW
+	* RESULT
+Previous tokens: [None]
+FAILED tests/test_grammar.py::test_parse_min_program - flowlang.errors.ParseError: Unexpected token Token('SEMICOLON', ';') at line 4, column 87.
+Expected one of: 
+	* POLICY
+	* TEAM
+	* ROLE
+	* PROCESS
+	* $END
+	* RESOURCE
+	* TYPE
+	* CHAIN
+	* FLOW
+	* RESULT
+Previous tokens: [Token('RBRACE', '}')]
+FAILED tests/test_concept_alignment.py::test_strict_team_typing - flowlang.errors.SemanticError: Team 't' of kind Search cannot perform 'tree(token(\'rule\', \'arg_list\'), [tree(token(\'rule\', \'named_arg\'), [tree(\'string\', [token(\'string\', \'"hello"\')])])])'. Expected 'search'.
+FAILED tests/test_concept_alignment.py::test_order_batch_processing - IndexError: list index out of range
+FAILED tests/test_concept_alignment.py::test_checkpoint_report_handover - assert False
+ +  where False = any(<generator object test_checkpoint_report_handover.<locals>.<genexpr> at 0x0000026FEFF47510>)
+FAILED tests/test_concept_alignment.py::test_orders_promotion - FileNotFoundError: State file not found: 0.40060002356767654}}
+FAILED tests/test_robustness.py::TestMalformedAIResponse::test_missing_required_field - flowlang.errors.SchemaValidationError: AI response for 'judge' failed schema validation: 2 validation errors for JudgeResult
+confidence
+  Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+pass
+  Field required [type=missing, input_value={'score': 0.8}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Received data: {'score': 0.8}
+FAILED tests/test_robustness.py::TestMalformedAIResponse::test_wrong_type_in_response - flowlang.errors.SchemaValidationError: AI response for 'judge' failed schema validation: 2 validation errors for JudgeResult
+score
+  Value error, Cannot convert 'high' to float [type=value_error, input_value='high', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/value_error
+confidence
+  Value error, Cannot convert 'very' to float [type=value_error, input_value='very', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/value_error
+Received data: {'score': 'high', 'confidence': 'very', 'pass': 'yes'}
+FAILED tests/test_robustness.py::TestProcessTreePolicies::test_protected_node_collapse_blocked - Failed: DID NOT RAISE <class 'flowlang.errors.RuntimeFlowError'>
+FAILED tests/test_human_gates.py::TestHumanGates::test_dry_run_action_skipped - AttributeError: 'Order' object has no attribute 'tag'
+================== 10 failed, 29 passed, 1 warning in 1.53s ===================

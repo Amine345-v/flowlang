@@ -1,166 +1,118 @@
 """
 Performance benchmarks for FlowLang.
+Tests parsing speed and runtime execution performance.
 """
 import time
-import timeit
 import statistics
-from pathlib import Path
 
 import pytest
 
-from flowlang.parser import Parser
+from flowlang.parser import parse
 from flowlang.runtime import Runtime
 
+
 # Number of repetitions for benchmarks
-BENCHMARK_ITERATIONS = 100
+BENCHMARK_ITERATIONS = 50
 
 
-def benchmark_flow_execution():
-    """Benchmark the execution time of a simple flow."""
-    # Setup
-    parser = Parser()
-    runtime = Runtime()
-    
-    # Register teams
-    runtime.register_team("devs", "DEVELOPMENT")
-    runtime.register_team("qa", "QUALITY_ASSURANCE")
-    
-    # Define a simple flow
-    flow_src = """
-    flow benchmark_flow(devs, qa) {
-        checkpoint "develop" {
-            devs: write_code()
-            qa: review_code()
-        }
-        
-        checkpoint "test" {
-            devs: fix_bugs()
-            qa: verify_fixes()
-        }
-        
-        checkpoint "deploy" {
-            devs: deploy()
-            qa: smoke_test()
-        }
-    }
-    """
-    
-    # Parse the flow
-    flow = parser.parse(flow_src)
-    
-    # Time the execution
-    start_time = time.perf_counter()
-    runtime.execute_flow(flow, {"devs": "devs", "qa": "qa"})
-    end_time = time.perf_counter()
-    
-    return end_time - start_time
-
-
-def benchmark_chain_operations():
-    """Benchmark chain touch operations."""
-    runtime = Runtime()
-    
-    # Create a chain with many nodes
-    nodes = [f"node_{i}" for i in range(1000)]
-    runtime.create_chain("large_chain", nodes)
-    
-    # Time touching each node
-    def touch_nodes():
-        for node in nodes:
-            runtime.touch_chain("large_chain", node)
-    
-    duration = timeit.timeit(touch_nodes, number=10) / 10  # Average over 10 runs
-    return duration / len(nodes)  # Time per touch
-
-
-def benchmark_process_operations():
-    """Benchmark process operations."""
-    runtime = Runtime()
-    
-    # Setup chain
-    runtime.create_chain("deploy_flow", ["build", "test", "deploy"])
-    
-    # Create process
-    runtime.create_process("deployment", "deploy_flow")
-    
-    # Time marking process status
-    def mark_process():
-        for i in range(1000):
-            runtime.mark_process("deployment", f"status_{i % 5}", f"Test {i}")
-    
-    duration = timeit.timeit(mark_process, number=10) / 10  # Average over 10 runs
-    return duration / 1000  # Time per mark operation
-
-
-@pytest.mark.benchmark
 class TestPerformance:
     """Performance test cases."""
     
-    def test_flow_execution_performance(self, benchmark):
-        """Test the performance of flow execution."""
-        # Run benchmark multiple times and collect results
+    def test_parsing_performance(self):
+        """Test the performance of parsing a flow definition."""
+        flow_src = """
+        team dev : Command<Search> [size=2];
+        team qa : Command<Judge> [size=1];
+        team ops : Command<Try> [size=1];
+        flow benchmark_flow(using: dev, qa, ops) {
+            checkpoint "develop" {
+                dev.search("requirements");
+                qa.judge("code", "quality");
+            }
+            checkpoint "test" {
+                ops.try("fix");
+                qa.judge("result", "pass");
+            }
+            checkpoint "deploy" {
+                ops.try("deploy to staging");
+            }
+        }
+        """
+        
         times = []
         for _ in range(BENCHMARK_ITERATIONS):
             start_time = time.perf_counter()
-            benchmark_flow_execution()
+            parse(flow_src)
             end_time = time.perf_counter()
             times.append(end_time - start_time)
         
-        # Calculate statistics
         mean = statistics.mean(times)
-        stddev = statistics.stdev(times) if len(times) > 1 else 0
-        
-        print(f"\nFlow Execution Performance (n={BENCHMARK_ITERATIONS}):")
-        print(f"  Mean: {mean*1000:.2f}ms")
-        print(f"  StdDev: {stddev*1000:.2f}ms")
-        print(f"  Min: {min(times)*1000:.2f}ms")
-        print(f"  Max: {max(times)*1000:.2f}ms")
-        
-        # Add assertion to fail if performance degrades significantly
-        assert mean < 0.1, f"Flow execution too slow: {mean*1000:.2f}ms"
+        assert mean < 0.1, f"Parsing too slow: {mean*1000:.2f}ms mean"
     
-    def test_chain_operations_performance(self, benchmark):
-        """Test the performance of chain operations."""
-        # Run benchmark multiple times and collect results
+    def test_runtime_load_performance(self):
+        """Test the performance of loading (parse + semantic analysis)."""
+        flow_src = """
+        team dev : Command<Search> [size=2];
+        team qa : Command<Judge> [size=1];
+        flow load_test(using: dev, qa) {
+            checkpoint "step1" {
+                dev.search("query");
+                qa.judge("result", "criteria");
+            }
+            checkpoint "step2" {
+                dev.search("follow_up");
+            }
+        }
+        """
+        
         times = []
         for _ in range(BENCHMARK_ITERATIONS):
-            times.append(benchmark_chain_operations())
+            rt = Runtime(dry_run=True)
+            start_time = time.perf_counter()
+            rt.load(flow_src)
+            end_time = time.perf_counter()
+            times.append(end_time - start_time)
         
-        # Convert to microseconds for better readability
-        times_us = [t * 1_000_000 for t in times]
-        
-        # Calculate statistics
-        mean = statistics.mean(times_us)
-        stddev = statistics.stdev(times_us) if len(times_us) > 1 else 0
-        
-        print(f"\nChain Touch Performance (n={BENCHMARK_ITERATIONS}):")
-        print(f"  Mean: {mean:.2f}μs per touch")
-        print(f"  StdDev: {stddev:.2f}μs")
-        print(f"  Min: {min(times_us):.2f}μs")
-        print(f"  Max: {max(times_us):.2f}μs")
-        
-        # Add assertion to fail if performance degrades significantly
-        assert mean < 1000, f"Chain touch operation too slow: {mean:.2f}μs"
+        mean = statistics.mean(times)
+        assert mean < 0.2, f"Loading too slow: {mean*1000:.2f}ms mean"
     
-    def test_process_operations_performance(self, benchmark):
-        """Test the performance of process operations."""
-        # Run benchmark multiple times and collect results
+    def test_dry_run_execution_performance(self):
+        """Test the performance of dry-run flow execution."""
+        flow_src = """
+        team dev : Command<Search> [size=1];
+        flow exec_test(using: dev) {
+            checkpoint "run" {
+                dev.search("query");
+            }
+        }
+        """
+        
         times = []
         for _ in range(BENCHMARK_ITERATIONS):
-            times.append(benchmark_process_operations())
+            rt = Runtime(dry_run=True)
+            rt.load(flow_src)
+            start_time = time.perf_counter()
+            rt.run_flow("exec_test")
+            end_time = time.perf_counter()
+            times.append(end_time - start_time)
         
-        # Convert to microseconds for better readability
-        times_us = [t * 1_000_000 for t in times]
+        mean = statistics.mean(times)
+        assert mean < 0.5, f"Dry-run execution too slow: {mean*1000:.2f}ms mean"
+    
+    def test_deep_merge_performance(self):
+        """Test the performance of deep_merge operations."""
+        rt = Runtime()
         
-        # Calculate statistics
-        mean = statistics.mean(times_us)
-        stddev = statistics.stdev(times_us) if len(times_us) > 1 else 0
+        # Create large dicts to merge
+        dict_a = {f"key_{i}": [j for j in range(10)] for i in range(100)}
+        dict_b = {f"key_{i}": [j + 10 for j in range(10)] for i in range(100)}
         
-        print(f"\nProcess Mark Performance (n={BENCHMARK_ITERATIONS}):")
-        print(f"  Mean: {mean:.2f}μs per mark")
-        print(f"  StdDev: {stddev:.2f}μs")
-        print(f"  Min: {min(times_us):.2f}μs")
-        print(f"  Max: {max(times_us):.2f}μs")
+        times = []
+        for _ in range(BENCHMARK_ITERATIONS):
+            start_time = time.perf_counter()
+            rt._deep_merge(dict_a.copy(), dict_b.copy())
+            end_time = time.perf_counter()
+            times.append(end_time - start_time)
         
-        # Add assertion to fail if performance degrades significantly
-        assert mean < 1000, f"Process mark operation too slow: {mean:.2f}μs"
+        mean = statistics.mean(times)
+        assert mean < 0.01, f"Deep merge too slow: {mean*1000:.2f}ms mean"

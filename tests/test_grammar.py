@@ -15,9 +15,9 @@ def test_parse_min_program():
         'result R { x: number; };\n'
         'type Command<Search>;\n'
         'team T: Command<Search> [size=1];\n'
-        'chain C { nodes: [A,B]; propagation: causal(decay=0.5, backprop=true, forward=true); };\n'
-        'process P "X" { root: "R"; };\n'
-        'flow F(using: T) { checkpoint "C1" { _ = T.search("q"); } }\n'
+        'chain C { nodes: [A,B]; propagation: causal(decay=0.5, backprop=true, forward=true); }\n'
+        'process P "X" { root: "R"; }\n'
+        'flow F(using: T) { checkpoint "C1" { T.search("q"); } }\n'
     )
     tree = parse(src)
     assert tree is not None

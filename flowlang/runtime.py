@@ -23,9 +23,15 @@ except Exception:  # pragma: no cover - optional dependency
 from .parser import parse
 from .semantic import SemanticAnalyzer
 from .errors import RuntimeFlowError
-from .types import TypedValue, ValueTag, Order, CommandKind
+from .types import TypedValue, ValueTag, Order, CommandKind, CriticalFeature, parse_critical_feature
 from .ai_providers import select_provider
 from .persistence import PersistenceManager, FlowState
+
+try:
+    from .graph_engine import SystemTreeEngine
+    _HAS_GRAPH_ENGINE = True
+except ImportError:
+    _HAS_GRAPH_ENGINE = False
 
 # Optional OpenAI client import for AI-backed execution
 try:  # pragma: no cover - optional dependency
@@ -43,6 +49,7 @@ class EvalContext:
     reports: List[Any] = None
     merge_policy: str = "last_wins"
     critical_features: List[Any] = None # System Tree: Commanding Traces
+    last_structural_gap: Optional[str] = None # Refinement Command from Judge
 
     def __post_init__(self):
         if self.reports is None:
@@ -77,10 +84,35 @@ class Runtime:
         # Multi-provider selector (OpenAI → Anthropic → Gemini → Mistral → Cohere → Azure → OpenRouter → Ollama)
         self.ai_provider = select_provider()
         self.persistence = PersistenceManager()
+        # System Tree: DAG-enforced graph for echo propagation & ancestry checks
+        if _HAS_GRAPH_ENGINE:
+            try:
+                self.system_tree = SystemTreeEngine()
+            except (ImportError, Exception):
+                self.system_tree = None
+        else:
+            self.system_tree = None
+
+        # Loguru: structured, tamper-proof audit logging
+        try:
+            from loguru import logger as _loguru
+            import sys as _sys
+            _loguru.remove()  # Remove default handler
+            _loguru.add(_sys.stdout, format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>", level="INFO")
+            _loguru.add(
+                os.path.join(self.persistence.base_path, "audit", "flowlang_{time}.log"),
+                rotation="10 MB", serialize=True, level="DEBUG"
+            )
+            self._loguru = _loguru
+        except ImportError:
+            self._loguru = None
 
     def log(self, msg: str):
         self.console.append(msg)
-        print(msg)
+        if self._loguru:
+            self._loguru.info(msg)
+        else:
+            print(msg)
 
     def load(self, source: str | Path) -> Tree:
         self.tree = parse(source)
@@ -204,7 +236,9 @@ class Runtime:
                 saved_path = self.persistence.save_state(
                     name=name,
                     ctx_vars=ctx.variables,
-                    checkpoints=checkpoints_names[:pc+1]
+                    checkpoints=checkpoints_names[:pc+1],
+                    chains=self.chains,
+                    processes=self.processes
                 )
                 self.log(f"[persistence] Saved state to {saved_path}")
             except Exception as e:
@@ -597,6 +631,38 @@ class Runtime:
                     raise RuntimeFlowError(
                         f"Deploy blocked by chain '{cname}': require_eval and Evaluation effect {eval_eff} < 0.7")
         self.log(f"[deploy] model={model} env={env}")
+
+    def causal_echo(self, chain_name: str, node_name: str, effect: Any, ctx: EvalContext):
+        """Triggers a recursive adjustment in the system. 
+        If an upstream trace is modified, this propagates 'drift' or 'dirty' state to downstream nodes."""
+        self.log(f"[causal_echo] Retriggering from {chain_name}.{node_name} with value {effect}")
+        
+        # 1. Update the effect at the source
+        self._exec_chain_touch(Tree("chain_touch", [
+            Token("IDENTIFIER", chain_name),
+            Token("IDENTIFIER", node_name),
+        ]), ctx)
+        
+        ch = self.chains.get(chain_name)
+        if ch:
+            ch["effects"][node_name] = effect
+        
+        # 2. Use SystemTreeEngine for graph-based propagation if available
+        if self.system_tree and self.system_tree.node_count > 0:
+            downstream = self.system_tree.get_echo_path(node_name)
+            for d_node in downstream:
+                self.log(f"[causal_echo] Graph: Invalidating downstream: {d_node}")
+                if ch and d_node in ch.get("effects", {}):
+                    ch["effects"][d_node] = 0.0  # Force re-execution
+        elif ch:
+            # Fallback: dict-based propagation
+            if node_name in ch.get("order", []):
+                idx = ch["order"].index(node_name)
+                for j in range(idx + 1, len(ch["order"])):
+                    downstream_node = ch["order"][j]
+                    if ch["effects"].get(downstream_node) in ("satisfied", "skip", "fixed"):
+                        self.log(f"[causal_echo] Invalidating downstream: {downstream_node}")
+                        ch["effects"][downstream_node] = 0.0
 
     def _exec_audit(self, node: Tree, ctx: EvalContext):
         # IDENT "." "audit" "(" ")"
@@ -1045,23 +1111,38 @@ class Runtime:
         self.log(f"[tool] {name}.{op} args={args} kwargs={kwargs}")
 
     def _exec_action(self, node: Tree, ctx: EvalContext):
-        # IDENT '.' command_action
+        # IDENT '.' command_action  ->  search_action | try_action | judge_action | ask_action
         team = str(node.children[0])
-        action = node.children[1]
-        verb = str(action.children[0])
+        action = node.children[1]  # command_action tree
+        # The verb sub-rule is action.children[0] (e.g., search_action tree)
+        verb_rule = action.children[0] if isinstance(action.children[0], Tree) else action
+        verb_map = {
+            "search_action": "search",
+            "try_action": "try",
+            "judge_action": "judge",
+            "ask_action": "ask",
+        }
+        verb = verb_map.get(verb_rule.data, str(verb_rule.data))
 
-        # parse args (needed for logging even in dry run)
+        # parse args from inside the verb sub-rule (the arg_list is a child of the sub-rule)
         args: List[Any] = []
         kwargs: Dict[str, Any] = {}
-        if len(action.children) > 1 and isinstance(action.children[1], Tree) and action.children[1].data == "arg_list":
-            for item in action.children[1].children:
-                if isinstance(item, Tree) and item.data == "named_arg":
-                    k = str(item.children[0])
-                    v = self._eval_expr(item.children[1], ctx)
-                    kwargs[k] = v
-                else:
-                    v = self._eval_expr(item.children[0], ctx)
-                    args.append(v)
+        for child in verb_rule.children:
+            if isinstance(child, Tree) and child.data == "arg_list":
+                for item in child.children:
+                    if isinstance(item, Tree) and item.data == "named_arg":
+                        if len(item.children) == 2:
+                            # named: IDENT "=" expr
+                            k = str(item.children[0])
+                            v = self._eval_expr(item.children[1], ctx)
+                            kwargs[k] = v
+                        else:
+                            # positional: expr
+                            v = self._eval_expr(item.children[0], ctx)
+                            args.append(v)
+                    else:
+                        v = self._eval_expr(item, ctx)
+                        args.append(v)
 
         # 6. Concept Alignment: Strict Team Typing
         # Map verb to kind
@@ -1137,13 +1218,33 @@ class Runtime:
                         res_val = TypedValue(ValueTag.Unknown, meta={"text": "dry_run"})
                         member_idx = self._select_team_member(team)
                     else:
+                        if ctx.last_structural_gap:
+                            kwargs["structural_gap"] = ctx.last_structural_gap
+
                         # Extract critical features to act as "Current" (التيار)
                         if hasattr(item, "critical_features") and item.critical_features:
                             kwargs["critical_features"] = [
-                                {"name": f.name, "value": f.value, "impact": f.impact}
+                                {"name": f.name, "value": f.value, 
+                                 "impact": f.impact.value if hasattr(f.impact, 'value') else f.impact,
+                                 "feature_id": f.feature_id, "ancestry_link": f.ancestry_link,
+                                 "feature_type": f.feature_type, 
+                                 "impact_zones": list(f.impact_zones) if f.impact_zones else [],
+                                 "echo_signature": f.echo_signature.value if hasattr(f.echo_signature, 'value') else f.echo_signature}
                                 for f in item.critical_features
                             ]
                         res_val, member_idx = self._execute_single_action(team, verb, i_args, kwargs, ctx)
+
+                        # 🛡️ Capture Judge Failures as Structural Gaps
+                        if verb == "judge":
+                            # res_val might be a TypedValue or a raw dict
+                            content = res_val
+                            if hasattr(res_val, "tag"): # TypedValue
+                                content = res_val.value
+                            
+                            if isinstance(content, dict) and content.get("pass") is False:
+                                ctx.last_structural_gap = content.get("reason", "Structural Gap Detected.")
+                            else:
+                                ctx.last_structural_gap = None # Clear on success
                     
                     item.log_activity(team, verb, res_val, member_idx=member_idx)
                     
@@ -1314,8 +1415,10 @@ class Runtime:
                 "  \"output\": string,\n  \"metrics\": {\"time\": number}\n}"
             ),
             "judge": (
-                "You evaluate against criteria and return JSON: {\n"
-                "  \"score\": number,\n  \"confidence\": number,\n  \"pass\": boolean\n}"
+                "You are the Judge in a Certainty Loop (اليقين). You evaluate work not just based on raw output, "
+                "but strictly against the Critical Features and System Tree context. Reach a verdict of Certainty (اليقين) "
+                "or identify the exact trace that caused a Drift. Return JSON: {\n"
+                "  \"score\": number,\n  \"confidence\": number,\n  \"pass\": boolean,\n  \"drift_detected\": boolean,\n  \"reason\": string\n}"
             ),
         }
         system_msg = system_prompts.get(verb, "You are an AI that executes the requested command. Prefer JSON outputs.")
@@ -1349,6 +1452,11 @@ class Runtime:
         if "critical_features" in kwargs:
             user_content["commanding_traces"] = kwargs["critical_features"]
             system_msg += "\nIMPORTANT: Follow these Commanding Traces strictly as they represent the CURRENT of the work."
+        
+        # 🛡️ Constitutional Refinement: Structural Gap Reports
+        if "structural_gap" in kwargs and kwargs["structural_gap"]:
+            system_msg += f"\n\n[STRUCTURAL GAP REPORT - REFINEMENT COMMAND]\n{kwargs['structural_gap']}\n"
+            system_msg += "You MUST address these specific gaps in your next output to achieve Constitutional Certainty."
 
         # Call the model
         try:
