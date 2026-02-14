@@ -1,0 +1,41 @@
+﻿python : ƒöù Found pyo3 
+bindings
+At line:1 char:171
++ ... 
+owlang\flowlang_core"; 
+python -m maturin build 
+--release 2>&1 | Out-F ...
++                         
+   ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (   
+ ƒöù Found pyo3 bindin    
+gs:String) [], Remote    
+Exception
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+ƒÉì Found CPython 3.14 at 
+C:\Users\asusu\AppData\Loc
+al\Python\pythoncore-3.14-
+64\python.exe
+ƒôí Using build options 
+features from 
+pyproject.toml
+   Compiling 
+flowlang_core v0.1.0 (C:\U
+sers\asusu\CascadeProjects
+\flowlang\flowlang\flowlan
+g_core)
+    Finished `release` 
+profile [optimized] 
+target(s) in 3.46s
+ƒôª Built wheel for 
+CPython 3.14 to C:\Users\a
+susu\CascadeProjects\flowl
+ang\flowlang\flowlang_core
+\target\wheels\flowlang_co
+re-0.1.0-cp314-cp314-win_a
+md64.whl

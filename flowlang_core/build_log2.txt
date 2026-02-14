@@ -1,0 +1,207 @@
+﻿python :     Updating 
+crates.io index
+At line:1 char:171
++ ... 
+owlang\flowlang_core"; 
+python -m maturin build 
+--release 2>&1 | Out-F ...
++                         
+   ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (   
+     Updating crates.io   
+  index:String) [], Re    
+moteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+     Locking 6 packages 
+to latest compatible 
+versions
+      Adding 
+crossbeam-deque v0.8.6
+      Adding 
+crossbeam-epoch v0.9.18
+      Adding 
+crossbeam-utils v0.8.21
+      Adding either 
+v1.15.0
+      Adding rayon v1.11.0
+      Adding rayon-core 
+v1.13.0
+ Downloading crates ...
+  Downloaded 
+crossbeam-deque v0.8.6
+  Downloaded 
+crossbeam-epoch v0.9.18
+  Downloaded 
+crossbeam-utils v0.8.21
+  Downloaded rayon-core 
+v1.13.0
+  Downloaded either 
+v1.15.0
+  Downloaded rayon v1.11.0
+­ƒöù Found pyo3 bindings
+ƒÉì Found CPython 3.14 at 
+C:\Users\asusu\AppData\Loc
+al\Python\pythoncore-3.14-
+64\python.exe
+ƒôí Using build options 
+features from 
+pyproject.toml
+   Compiling 
+crossbeam-utils v0.8.21
+   Compiling rayon-core 
+v1.13.0
+   Compiling either 
+v1.15.0
+   Compiling 
+crossbeam-epoch v0.9.18
+   Compiling 
+crossbeam-deque v0.8.6
+   Compiling rayon v1.11.0
+   Compiling 
+flowlang_core v0.1.0 (C:\U
+sers\asusu\CascadeProjects
+\flowlang\flowlang\flowlan
+g_core)
+warning: unused import: 
+`rayon::prelude`
+ --> 
+src\propagation.rs:4:5
+  |
+4 | use rayon::prelude::*;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+warning: unused variable: 
+`source_pos`
+   --> 
+src\propagation.rs:352:13
+    |
+352 |         let 
+source_pos = match topo_or
+der.iter().position(|&n| 
+n == source_idx) {
+    |             
+^^^^^^^^^^ help: if this 
+is intentional, prefix it 
+with an underscore: 
+`_source_pos`
+    |
+    = note: `#[warn(unused
+_variables)]` (part of 
+`#[warn(unused)]`) on by 
+default
+
+error[E0507]: cannot move 
+out of dereference of 
+`pyo3::Borrowed<'_, '_, 
+PyBool>`
+   --> src\lib.rs:111:54
+    |
+111 |             result.i
+nsert("is_critical".to_str
+ing(), report.is_critical.
+into_pyobject(py).unwrap()
+.into_any().unbind());
+    |                     
+                          
+       ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+ ---------- value moved 
+due to this method call
+    |                     
+                          
+       |
+    |                     
+                          
+       move occurs 
+because value has type 
+`pyo3::Bound<'_, 
+PyBool>`, which does not 
+implement the `Copy` trait
+    |
+note: `pyo3::Bound::<'py, 
+T>::into_any` takes 
+ownership of the receiver 
+`self`, which moves value
+   --> C:\Users\asusu\.car
+go\registry\src\index.crat
+es.io-1949cf8c6b5b557f\pyo
+3-0.23.5\src\instance.rs:5
+77:21
+    |
+577 |     pub fn 
+into_any(self) -> 
+Bound<'py, PyAny> {
+    |                     
+^^^^
+help: you can `clone` the 
+value and consume it, but 
+this might not be your 
+desired behavior
+    |
+111 |             result.i
+nsert("is_critical".to_str
+ing(), <pyo3::Bound<'_, 
+PyBool> as Clone>::clone(&
+report.is_critical.into_py
+object(py).unwrap()).into_
+any().unbind());
+    |                     
+                          
+       +++++++++++++++++++
+++++++++++++++++++++++++  
+                          
+                 +
+help: consider cloning 
+the value if the 
+performance cost is 
+acceptable
+    |
+111 |             result.i
+nsert("is_critical".to_str
+ing(), report.is_critical.
+into_pyobject(py).unwrap()
+.clone().into_any().unbind
+());
+    |                     
+                          
+                          
+                          
+++++++++
+
+For more information 
+about this error, try 
+`rustc --explain E0507`.
+warning: `flowlang_core` 
+(lib) generated 2 warnings
+error: could not compile 
+`flowlang_core` (lib) due 
+to 1 previous error; 2 
+warnings emitted
+­ƒÆÑ maturin failed
+  Caused by: Failed to 
+build a native library 
+through cargo
+  Caused by: Cargo build 
+finished with "exit code: 
+101": `"cargo" "rustc" 
+"--profile" "release" 
+"--features" 
+"pyo3/extension-module" 
+"--message-format" 
+"json-render-diagnostics" 
+"--manifest-path" "C:\\Use
+rs\\asusu\\CascadeProjects
+\\flowlang\\flowlang\\flow
+lang_core\\Cargo.toml" 
+"--lib"`

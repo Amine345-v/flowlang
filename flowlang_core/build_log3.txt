@@ -1,0 +1,119 @@
+﻿python : ƒöù Found pyo3 
+bindings
+At line:1 char:171
++ ... 
+owlang\flowlang_core"; 
+python -m maturin build 
+--release 2>&1 | Out-F ...
++                         
+   ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (   
+ ƒöù Found pyo3 bindin    
+gs:String) [], Remote    
+Exception
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+ƒÉì Found CPython 3.14 at 
+C:\Users\asusu\AppData\Loc
+al\Python\pythoncore-3.14-
+64\python.exe
+ƒôí Using build options 
+features from 
+pyproject.toml
+   Compiling 
+flowlang_core v0.1.0 (C:\U
+sers\asusu\CascadeProjects
+\flowlang\flowlang\flowlan
+g_core)
+error[E0507]: cannot move 
+out of dereference of 
+`pyo3::Borrowed<'_, '_, 
+PyBool>`
+   --> src\lib.rs:111:54
+    |
+111 |             result.i
+nsert("is_critical".to_str
+ing(), report.is_critical.
+into_pyobject(py).unwrap()
+.clone().into_any().unbind
+());
+    |                     
+                          
+       ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^ ---------- value 
+moved due to this method 
+call
+    |                     
+                          
+       |
+    |                     
+                          
+       move occurs 
+because value has type 
+`pyo3::Bound<'_, 
+PyBool>`, which does not 
+implement the `Copy` trait
+    |
+note: `pyo3::Bound::<'py, 
+T>::into_any` takes 
+ownership of the receiver 
+`self`, which moves value
+   --> C:\Users\asusu\.car
+go\registry\src\index.crat
+es.io-1949cf8c6b5b557f\pyo
+3-0.23.5\src\instance.rs:5
+77:21
+    |
+577 |     pub fn 
+into_any(self) -> 
+Bound<'py, PyAny> {
+    |                     
+^^^^
+help: you can `clone` the 
+value and consume it, but 
+this might not be your 
+desired behavior
+    |
+111 -             result.i
+nsert("is_critical".to_str
+ing(), report.is_critical.
+into_pyobject(py).unwrap()
+.clone().into_any().unbind
+());
+111 +             result.i
+nsert("is_critical".to_str
+ing(), <pyo3::Bound<'_, 
+PyBool> as Clone>::clone(&
+report.is_critical.into_py
+object(py).unwrap()).into_
+any().unbind());
+    |
+
+For more information 
+about this error, try 
+`rustc --explain E0507`.
+error: could not compile 
+`flowlang_core` (lib) due 
+to 1 previous error
+­ƒÆÑ maturin failed
+  Caused by: Failed to 
+build a native library 
+through cargo
+  Caused by: Cargo build 
+finished with "exit code: 
+101": `"cargo" "rustc" 
+"--profile" "release" 
+"--features" 
+"pyo3/extension-module" 
+"--message-format" 
+"json-render-diagnostics" 
+"--manifest-path" "C:\\Use
+rs\\asusu\\CascadeProjects
+\\flowlang\\flowlang\\flow
+lang_core\\Cargo.toml" 
+"--lib"`
