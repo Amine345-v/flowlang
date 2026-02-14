@@ -601,6 +601,33 @@ class Runtime:
         except ValueError:
             idx = None
             
+        # RUST OPTIMIZATION: Use EchoEngine if available and effect is numeric
+        # This offloads the heavy bidirectional decay math to Rust.
+        if idx is not None and isinstance(effect, (int, float)) and \
+           self.system_tree and getattr(self.system_tree, 'rust_engine', None):
+            try:
+                cap_val = float(cap) if (cap is not None and isinstance(cap, (int, float))) else None
+                
+                # Call Rust engine
+                # signature: propagate(order, source, effect, decay, cap, fwd, bwd)
+                rust_res = self.system_tree.rust_engine.propagate(
+                    order, 
+                    str(node_name), 
+                    float(effect), 
+                    float(decay), 
+                    cap_val, 
+                    do_fwd, 
+                    do_bwd
+                )
+                
+                # Merge results
+                for k, v in rust_res.items():
+                    effects_dict[k] = max(v, effects_dict.get(k, 0))
+                return
+            except Exception:
+                # Fallback to Python on any error (e.g. type mismatch, overflow)
+                pass
+            
         if idx is not None:
             # forward diffusion
             if do_fwd:

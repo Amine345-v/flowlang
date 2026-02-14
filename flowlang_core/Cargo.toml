@@ -1,0 +1,13 @@
+[package]
+name = "flowlang_core"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance echo propagation engine for FlowLang"
+
+[lib]
+name = "flowlang_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+petgraph = "0.7"
