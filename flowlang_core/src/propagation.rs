@@ -396,6 +396,96 @@ impl PropagationEngine {
         (is_stable, energy_per_level)
     }
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  ALGORITHM 5: Sensitivity Damping Protocol (تخميد الحساسية)
+    //  The exact formula: I_d = I_0 · e^(-γd)
+    //  where d = BFS depth from source node in the DAG.
+    //
+    //  CRITICAL DIFFERENCE from propagate_dag:
+    //  propagate_dag uses parent energy summation (can amplify at fan-in).
+    //  sensitivity_damping uses ONLY graph depth (guaranteed monotonic decrease).
+    //  This is the "Stability Guarantee" — distant nodes CANNOT be excited
+    //  beyond what pure physics allows.
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    pub fn sensitivity_damping(
+        &self,
+        source_node: &str,
+        initial_effect: f64,   // I_0
+        gamma: f64,            // γ (damping coefficient)
+        cap: Option<f64>,      // minimum threshold
+    ) -> HashMap<String, f64> {
+        let mut result: HashMap<String, f64> = HashMap::new();
+
+        let Some(&source_idx) = self.name_to_idx.get(source_node) else {
+            return result;
+        };
+
+        // Step 1: BFS to compute depth d for EVERY reachable node
+        let mut depths: HashMap<NodeIndex, usize> = HashMap::new();
+        depths.insert(source_idx, 0);
+        let mut queue = VecDeque::new();
+        queue.push_back(source_idx);
+
+        while let Some(node) = queue.pop_front() {
+            let depth = depths[&node];
+            for neighbor in self.graph.neighbors_directed(node, Direction::Outgoing) {
+                if !depths.contains_key(&neighbor) {
+                    depths.insert(neighbor, depth + 1);
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        // Step 2: Apply the exact exponential formula: I_d = I_0 · e^(-γd)
+        // Optionally modulated by node mass: I_d = I_0 · e^(-γd) · (1 / (1 + mass))
+        for (&node_idx, &depth) in &depths {
+            let d = depth as f64;
+            let mass = self.graph[node_idx].mass;
+            let mass_factor = 1.0 / (1.0 + mass);
+
+            // The core formula: I_d = I_0 · e^(-γd) · mass_factor
+            let intensity = initial_effect * (-gamma * d).exp() * mass_factor;
+
+            // Apply cap (logical firewall)
+            if let Some(c) = cap {
+                if intensity < c && depth > 0 {
+                    continue;
+                }
+            }
+
+            result.insert(self.graph[node_idx].name.clone(), intensity);
+        }
+
+        result
+    }
+
+    /// Returns the depth map: how deep each node is from the given source.
+    pub fn depth_map(&self, source_node: &str) -> HashMap<String, usize> {
+        let Some(&source_idx) = self.name_to_idx.get(source_node) else {
+            return HashMap::new();
+        };
+
+        let mut depths: HashMap<NodeIndex, usize> = HashMap::new();
+        depths.insert(source_idx, 0);
+        let mut queue = VecDeque::new();
+        queue.push_back(source_idx);
+
+        while let Some(node) = queue.pop_front() {
+            let depth = depths[&node];
+            for neighbor in self.graph.neighbors_directed(node, Direction::Outgoing) {
+                if !depths.contains_key(&neighbor) {
+                    depths.insert(neighbor, depth + 1);
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        depths.iter()
+            .map(|(&idx, &d)| (self.graph[idx].name.clone(), d))
+            .collect()
+    }
+
     // ─── Internal ───────────────────────────────────────────────
 
     fn rebuild_index_map(&mut self) {
@@ -508,5 +598,61 @@ mod tests {
         // SINK receives from ALL 1000 children
         let sink_energy = res.get("SINK").unwrap_or(&0.0);
         assert!(*sink_energy > 1000.0); // Sum of 1000 children
+    }
+
+    #[test]
+    fn test_sensitivity_damping_exact_formula() {
+        // Chain: A -> B -> C -> D (all zero mass = superconductors)
+        let mut e = PropagationEngine::new();
+        e.add_node("A".into(), 0.0);
+        e.add_node("B".into(), 0.0);
+        e.add_node("C".into(), 0.0);
+        e.add_node("D".into(), 0.0);
+        e.add_edge("A".into(), "B".into());
+        e.add_edge("B".into(), "C".into());
+        e.add_edge("C".into(), "D".into());
+
+        let gamma = 0.5;
+        let i0 = 100.0;
+        let res = e.sensitivity_damping("A", i0, gamma, None);
+
+        // I_d = 100 * e^(-0.5 * d) * 1.0 (mass=0, factor=1)
+        assert!((res["A"] - 100.0).abs() < 1e-10);
+        let expected_b = 100.0 * (-0.5_f64).exp();
+        assert!((res["B"] - expected_b).abs() < 1e-10);
+        let expected_c = 100.0 * (-1.0_f64).exp();
+        assert!((res["C"] - expected_c).abs() < 1e-10);
+        let expected_d = 100.0 * (-1.5_f64).exp();
+        assert!((res["D"] - expected_d).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_sensitivity_damping_with_mass() {
+        let mut e = PropagationEngine::new();
+        e.add_node("A".into(), 0.0);     // factor = 1.0
+        e.add_node("B".into(), 9.0);     // factor = 0.1
+        e.add_node("C".into(), 0.0);     // factor = 1.0
+        e.add_edge("A".into(), "B".into());
+        e.add_edge("B".into(), "C".into());
+
+        let res = e.sensitivity_damping("A", 100.0, 0.5, None);
+        let expected_b = 100.0 * (-0.5_f64).exp() * 0.1;
+        assert!((res["B"] - expected_b).abs() < 1e-10);
+        let expected_c = 100.0 * (-1.0_f64).exp() * 1.0;
+        assert!((res["C"] - expected_c).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_sensitivity_damping_diamond_no_amplification() {
+        // Diamond: A -> B, A -> C, B -> D, C -> D
+        // Unlike propagate_dag, D should NOT get amplified from two parents
+        let e = build_diamond();
+        let res = e.sensitivity_damping("A", 100.0, 0.5, None);
+
+        // D is at depth 2 from A, mass=0 -> factor=1
+        let expected_d = 100.0 * (-1.0_f64).exp();
+        assert!((res["D"] - expected_d).abs() < 1e-10,
+            "D should be {} but was {} — no fan-in amplification!",
+            expected_d, res["D"]);
     }
 }

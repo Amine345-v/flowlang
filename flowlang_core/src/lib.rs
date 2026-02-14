@@ -127,6 +127,23 @@ impl EchoEngine {
         self.engine.verify_stability(&source_node, effect, decay)
     }
 
+    // ─── Algorithm 5: Sensitivity Damping Protocol ──────────────
+
+    #[pyo3(signature = (source_node, initial_effect, gamma=0.5, cap=None))]
+    fn sensitivity_damping(
+        &self,
+        source_node: String,
+        initial_effect: f64,
+        gamma: f64,
+        cap: Option<f64>,
+    ) -> HashMap<String, f64> {
+        self.engine.sensitivity_damping(&source_node, initial_effect, gamma, cap)
+    }
+
+    fn depth_map(&self, source_node: String) -> HashMap<String, usize> {
+        self.engine.depth_map(&source_node)
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "EchoEngine(nodes={}, edges={}, is_dag={})",

@@ -128,6 +128,69 @@ class SystemTreeEngine:
             return []
         return list(nx.ancestors(self.graph, feature_id))
     
+    # ─── Protocols (Deep Tech) ───────────────────────────────────
+    
+    def sensitivity_damping(self, source_node: str, initial_effect: float, gamma: float = 0.5, cap: Optional[float] = None) -> Dict[str, float]:
+        """
+        Protocol 'Sensitivity Damping' (تخميد الحساسية):
+        Calculates impact using exact exponential decay based on graph depth.
+        Formula: I_d = I_0 * e^(-gamma * d)
+        
+        This guarantees stability for distant nodes regardless of connectivity.
+        """
+        if self.rust_engine:
+             return self.rust_engine.sensitivity_damping(source_node, initial_effect, gamma, cap)
+        
+        # Fallback: Python BFS implementation
+        if source_node not in self.graph.nodes:
+            return {}
+            
+        import math
+        results = {}
+        # BFS for depth
+        queue = [(source_node, 0)]
+        visited = {source_node}
+        depths = {source_node: 0}
+        
+        import collections
+        q = collections.deque([(source_node, 0)])
+        
+        while q:
+            curr, d = q.popleft()
+            
+            # mass factor (simplified for python fallback - assume 1.0 if not using Rust/CriticalFeature types heavily here)
+            # In a real fallback we'd read verify properties, but for now strict 1.0 is fine or read from graph data
+            mass = 1.0 # Default
+            # Attempt to read mass from graph data if available (though mass mapping logic is in add_trace)
+            # The node data is the feature object.
+            feat = self.graph.nodes[curr].get('data')
+            if feat:
+                sig = str(getattr(feat, 'echo_signature', 'MEDIUM'))
+                if sig == 'LOW': mass = 10.0
+                elif sig == 'MEDIUM': mass = 5.0
+                elif sig == 'HIGH': mass = 1.0
+                elif sig == 'CRITICAL': mass = 0.1
+
+            mass_factor = 1.0 / (1.0 + mass)
+            intensity = initial_effect * math.exp(-gamma * d) * mass_factor
+            
+            if cap is not None and intensity < cap and d > 0:
+                pass # Skip adding to results, but might still need to traverse? 
+                     # Actually if intensity is below cap, and decay is monotonic, children will be even lower.
+                     # So we can prune? Yes, if mass doesn't drop significantly.
+                     # But mass could drop (Superconductor children). So better to verify.
+                     # For fallback, let's just calc.
+            else:
+                results[curr] = intensity
+            
+            for child in self.graph.successors(curr):
+                if child not in visited:
+                    visited.add(child)
+                    depths[child] = d + 1
+                    q.append((child, d + 1))
+        
+        return results
+    
     # ─── Ancestry Verification (for Judge Engine) ────────────────
     
     def verify_ancestry(self, feature_id: str, claimed_parent: str) -> bool:
